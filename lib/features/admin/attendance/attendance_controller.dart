@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,7 +7,7 @@ import '../../../core/constants/enums.dart';
 import '../../../models/user_model.dart';
 import '../../../models/availability_model.dart';
 
-class AvailabilityListController with ChangeNotifier {
+class AttendanceController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -18,20 +17,16 @@ class AvailabilityListController with ChangeNotifier {
   MealType _selectedMeal = MealType.morning;
   MealType get selectedMeal => _selectedMeal;
 
-  // All approved members for this mess
-  List<UserModel> _allMembers = [];
-  List<UserModel> get allMembers => _allMembers;
-
-  // Set of UIDs that are OFF (meal-specific or permanentOff)
-  Set<String> _offUids = {};
-  Set<String> get offUids => _offUids;
+  // Only available members (green-dot users)
+  List<UserModel> _availableMembers = [];
+  List<UserModel> get availableMembers => _availableMembers;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
 
   String? _messId;
 
-  AvailabilityListController() {
+  AttendanceController() {
     _initialize();
   }
 
@@ -47,38 +42,32 @@ class AvailabilityListController with ChangeNotifier {
         ),
       ).first;
       _messId = userDoc.messId;
-      await _loadAvailability();
+      await _loadAttendance();
     }
   }
 
   void onDateSelected(DateTime date) {
     _selectedDate = date;
-    _loadAvailability();
+    _loadAttendance();
   }
 
   void setMealType(MealType? meal) {
     if (meal != null) {
       _selectedMeal = meal;
-      _loadAvailability();
+      _loadAttendance();
     }
   }
 
-  /// Check if a given user is available (not off)
-  bool isUserAvailable(String uid) => !_offUids.contains(uid);
-
-  /// Count of available members
-  int get availableCount => _allMembers.where((u) => isUserAvailable(u.uid)).length;
-
-  Future<void> _loadAvailability() async {
+  Future<void> _loadAttendance() async {
     if (_messId == null) return;
-    
+
     _isLoading = true;
     notifyListeners();
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      
-      // 1. Fetch ALL approved users for this mess (including admins filtered out later)
+
+      // 1. Fetch all approved CLIENT users for this mess
       final users = await _firestoreService.collectionStream(
         path: 'users',
         queryBuilder: (query) => query.where('messId', isEqualTo: _messId)
@@ -97,8 +86,7 @@ class AvailabilityListController with ChangeNotifier {
         ),
       ).first;
 
-      // Keep only CLIENTs
-      _allMembers = users.where((u) => u.role == 'CLIENT').toList();
+      final clientUsers = users.where((u) => u.role == 'CLIENT').toList();
 
       // 2. Fetch availability documents for this date/meal
       final availabilityDocs = await _firestoreService.collectionStream(
@@ -115,35 +103,63 @@ class AvailabilityListController with ChangeNotifier {
         ),
       ).first;
 
-      // 3. Build the OFF set: permanent off + meal-specific off + availability doc OFF
-      _offUids = {};
+      // 3. Build OFF set
+      final offUids = <String>{};
       
-      for (final user in _allMembers) {
-        // Permanent off
+      for (final user in clientUsers) {
         if (user.permanentOff) {
-          _offUids.add(user.uid);
+          offUids.add(user.uid);
           continue;
         }
-        // Per-meal off from user profile
         if (_selectedMeal == MealType.morning && user.morningOff) {
-          _offUids.add(user.uid);
+          offUids.add(user.uid);
           continue;
         }
         if (_selectedMeal == MealType.evening && user.eveningOff) {
-          _offUids.add(user.uid);
+          offUids.add(user.uid);
           continue;
         }
       }
 
-      // From availability collection
       for (final doc in availabilityDocs) {
         if (doc.status == 'OFF') {
-          _offUids.add(doc.uid);
+          offUids.add(doc.uid);
         }
       }
+
+      // 4. Only keep available members
+      _availableMembers = clientUsers.where((u) => !offUids.contains(u.uid)).toList();
+
+      // 5. Create attendance snapshot (if not exists)
+      final attendanceId = '${_messId}_${dateStr}_${_selectedMeal == MealType.morning ? "MORNING" : "EVENING"}';
+      final attendanceRef = FirebaseFirestore.instance.collection('attendance').doc(attendanceId);
+      final attendanceDoc = await attendanceRef.get();
       
+      if (!attendanceDoc.exists) {
+         await attendanceRef.set({
+           'messId': _messId,
+           'date': dateStr,
+           'meal': _selectedMeal == MealType.morning ? 'MORNING' : 'EVENING',
+           'presentCount': _availableMembers.length,
+           'createdAt': FieldValue.serverTimestamp(),
+         });
+         
+         // Clean up older docs (keep only 3 latest)
+         final allAttendance = await _firestoreService.collectionStream(
+            path: 'attendance',
+            queryBuilder: (query) => query.where('messId', isEqualTo: _messId).orderBy('createdAt', descending: true),
+            builder: (data, id) => id,
+         ).first;
+         
+         if (allAttendance.length > 3) {
+            for (var i = 3; i < allAttendance.length; i++) {
+               await _firestoreService.deleteData(path: 'attendance/${allAttendance[i]}');
+            }
+         }
+      }
+
     } catch (e) {
-      debugPrint('Error loading availability: $e');
+      debugPrint('Error loading attendance: $e');
     } finally {
       _isLoading = false;
       notifyListeners();

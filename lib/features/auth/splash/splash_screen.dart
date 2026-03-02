@@ -59,12 +59,8 @@ class _SplashScreenState extends State<SplashScreen> {
             Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
           }
         } else {
-          // CLIENT
-          if (userModel.messId == null) {
-            Navigator.pushReplacementNamed(context, AppRoutes.selectMess);
-          } else {
-            Navigator.pushReplacementNamed(context, AppRoutes.clientDashboard);
-          }
+          // CLIENT — always go to home hub
+          Navigator.pushReplacementNamed(context, AppRoutes.clientHome);
         }
       } catch (e) {
         // Handle error (e.g., offline)

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,6 +21,10 @@ class MembersController with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   String? _messId;
+  String? _errorMessage;
+  String? get errorMessage => _errorMessage;
+
+  StreamSubscription? _membersSubscription;
 
   MembersController() {
     _initialize();
@@ -30,7 +35,10 @@ class MembersController with ChangeNotifier {
      notifyListeners();
      try {
        final user = _auth.currentUser;
-       if (user == null) return;
+       if (user == null) {
+         _errorMessage = 'User not logged in';
+         return;
+       }
        
        final userDoc = await _firestoreService.documentStream(
           path: 'users/${user.uid}',
@@ -42,60 +50,89 @@ class MembersController with ChangeNotifier {
         ).first;
         _messId = userDoc.messId;
         
-        await _fetchMembers();
+        if (_messId == null) {
+          _errorMessage = 'No mess assigned';
+          return;
+        }
+
+        _listenToMembers();
+     } catch (e) {
+       _errorMessage = 'Failed to initialize: $e';
+       debugPrint('MembersController init error: $e');
      } finally {
        _isLoading = false;
        notifyListeners();
      }
   }
 
-  Future<void> _fetchMembers() async {
-    if (_messId == null) return;
-
-    final users = await _firestoreService.collectionStream(
+  void _listenToMembers() {
+    _membersSubscription?.cancel();
+    _membersSubscription = _firestoreService.collectionStream(
       path: 'users',
       queryBuilder: (query) => query.where('messId', isEqualTo: _messId),
       builder: (data, id) => UserModel(
         uid: id,
         name: data['name'] ?? '',
         contactNumber: data['contactNumber'] ?? '',
-        role: data['role'] ?? '', // Should be CLIENT usually
+        role: data['role'] ?? '',
         messId: _messId,
         approved: data['approved'] ?? false,
-        createdAt: (data['createdAt'] as Timestamp).toDate(),
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : DateTime.now(),
       ),
-    ).first;
-
-    _members = users.where((u) => u.approved && u.role == 'CLIENT').toList();
-    _pendingMembers = users.where((u) => !u.approved && u.role == 'CLIENT').toList();
-    notifyListeners();
+    ).listen(
+      (users) {
+        _members = users.where((u) => u.approved && u.role == 'CLIENT').toList();
+        _pendingMembers = users.where((u) => !u.approved && u.role == 'CLIENT').toList();
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        _errorMessage = 'Failed to fetch members: $e';
+        debugPrint('MembersController stream error: $e');
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
   }
-  
-  Future<void> removeMember(String uid) async {
-    // Logic: If remainingDiets == 0 -> Delete instantly. Else -> Send delete request.
-    
-    try {
-       // 1. Fetch Diet Balance
-       final dietDoc = await _firestoreService.documentStream(
-         path: 'dietBalances/$uid',
-         builder: (data, id) => data['remainingDiets'] ?? 0,
-       ).first; // This might throw if doc doesn't exist, handle gracefull
 
-       final int remainingDiets = dietDoc is int ? dietDoc : 0;
+  Future<void> removeMember(String uid) async {
+    try {
+       // Use direct Firestore get() to safely handle missing diet doc
+       final dietSnapshot = await FirebaseFirestore.instance
+           .collection('dietBalances')
+           .doc(uid)
+           .get();
+
+       final int remainingDiets = dietSnapshot.exists
+           ? (dietSnapshot.data()?['remainingDiets'] ?? 0)
+           : 0;
 
        if (remainingDiets == 0) {
-          // Delete Instantly
-          await _firestoreService.deleteData(path: 'users/$uid');
-          await _firestoreService.deleteData(path: 'dietBalances/$uid'); 
-          // Also cleanup other docs? (attendance, etc. - maybe expensive, leave for now)
-          await _fetchMembers();
-          // SnackBar? Controller doesn't have context easily. notifyListeners can trigger UI.
-       } else {
-          // Send DELETE_REQUEST
-          // Check if already sent?
+          // Send informational notification
           await _notificationService.sendNotification(
             messId: _messId!,
-            type: NotificationType.deleteRequest, // Ensure Enum has this
+            type: NotificationType.accountDeleted,
+            fromUid: _auth.currentUser!.uid,
+            toUid: uid,
+            message: 'You have been removed from the mess',
+          );
+          // Soft-delete: clear messId instead of deleting user doc
+          await _firestoreService.updateData(
+            path: 'users/$uid',
+            data: {'messId': null, 'approved': false},
+          );
+          // Delete diet balance if it exists
+          if (dietSnapshot.exists) {
+            try {
+              await _firestoreService.deleteData(path: 'dietBalances/$uid');
+            } catch (_) {}
+          }
+       } else {
+          await _notificationService.sendNotification(
+            messId: _messId!,
+            type: NotificationType.deleteRequest,
             fromUid: _auth.currentUser!.uid,
             toUid: uid,
           );
@@ -110,6 +147,11 @@ class MembersController with ChangeNotifier {
       path: 'users/$uid',
       data: {'approved': true},
     );
-    await _fetchMembers();
+  }
+
+  @override
+  void dispose() {
+    _membersSubscription?.cancel();
+    super.dispose();
   }
 }

@@ -76,16 +76,16 @@ class LoginController with ChangeNotifier {
           Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
         }
       } else {
-        if (userModel.messId == null) {
-          Navigator.pushReplacementNamed(context, AppRoutes.selectMess);
-        } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.clientDashboard);
-        }
+        Navigator.pushReplacementNamed(context, AppRoutes.clientHome);
       }
     } on FirebaseAuthException catch (e) {
-      _errorMessage = e.message;
+      if (e.code == 'user-not-found' || e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        _errorMessage = 'Invalid phone number or password.';
+      } else {
+        _errorMessage = e.message ?? 'Login failed. Please try again.';
+      }
     } catch (e) {
-      _errorMessage = 'Invalid credentials or account not found';
+      _errorMessage = 'Login failed: $e';
     } finally {
       _isLoading = false;
       notifyListeners();

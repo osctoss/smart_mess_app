@@ -23,6 +23,12 @@ class AdminDashboard extends StatelessWidget {
                 Navigator.pushNamed(context, AppRoutes.adminNotifications);
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.person),
+              onPressed: () {
+                Navigator.pushNamed(context, AppRoutes.clientProfile);
+              },
+            ),
           ],
         ),
         body: Consumer<AdminDashboardController>(
@@ -70,7 +76,7 @@ class AdminDashboard extends StatelessWidget {
                   title: 'Attendance',
                   icon: Icons.check_circle_outline,
                   onTap: () {
-                    // Navigator.pushNamed(context, AppRoutes.attendance);
+                    Navigator.pushNamed(context, AppRoutes.attendance);
                   },
                 ),
               ],

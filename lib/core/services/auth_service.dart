@@ -56,8 +56,12 @@ class AuthService {
     required String email,
     required String password,
   }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No authenticated user found to link credentials.');
+    }
     final credential = EmailAuthProvider.credential(email: email, password: password);
-    await _auth.currentUser?.linkWithCredential(credential);
+    await user.linkWithCredential(credential);
   }
 
   // ── Email/Password Auth (for login) ──

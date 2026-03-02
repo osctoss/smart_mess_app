@@ -8,6 +8,7 @@ import '../../features/auth/select_mess/select_mess_screen.dart';
 import '../../features/client/dashboard/client_dashboard.dart';
 import '../../features/client/availability/availability_screen.dart';
 import '../../features/client/notifications/client_notifications_screen.dart';
+import '../../features/client/home/client_home_screen.dart';
 import '../../features/client/profile/profile_screen.dart';
 import '../../features/client/profile/change_password_screen.dart';
 import '../../features/client/profile/change_phone_screen.dart';
@@ -17,6 +18,7 @@ import '../../features/admin/availability_list/availability_list_screen.dart';
 import '../../features/admin/members/members_screen.dart';
 import '../../features/admin/members/client_detail_screen.dart';
 import '../../features/admin/notifications/admin_notifications_screen.dart';
+import '../../features/admin/attendance/attendance_screen.dart';
 import '../../models/user_model.dart';
 
 class AppRoutes {
@@ -28,6 +30,7 @@ class AppRoutes {
   static const String selectMess = '/selectMess';
   static const String clientDashboard = '/clientDashboard';
   static const String clientAvailability = '/clientAvailability';
+  static const String clientHome = '/clientHome';
   static const String clientNotifications = '/clientNotifications';
   static const String clientProfile = '/clientProfile';
   static const String changePassword = '/changePassword';
@@ -38,6 +41,7 @@ class AppRoutes {
   static const String membersList = '/membersList';
   static const String clientDetail = '/clientDetail';
   static const String adminNotifications = '/adminNotifications';
+  static const String attendance = '/attendance';
 
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -51,6 +55,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => const CreateMessScreen());
       case selectMess:
         return MaterialPageRoute(builder: (_) => const SelectMessScreen());
+      case clientHome:
+        return MaterialPageRoute(builder: (_) => const ClientHomeScreen());
       case clientDashboard:
         return MaterialPageRoute(builder: (_) => const ClientDashboard());
       case clientAvailability:
@@ -76,6 +82,8 @@ class AppRoutes {
         return MaterialPageRoute(builder: (_) => ClientDetailScreen(user: user));
       case adminNotifications:
         return MaterialPageRoute(builder: (_) => const AdminNotificationsScreen());
+      case attendance:
+        return MaterialPageRoute(builder: (_) => const AttendanceScreen());
       default:
         return MaterialPageRoute(
           builder: (_) => Scaffold(

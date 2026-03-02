@@ -51,21 +51,25 @@ class MembersScreen extends StatelessWidget {
                     },
                   ),
                   // Pending List
-                   ListView.builder(
-                    itemCount: controller.pendingMembers.length,
-                    itemBuilder: (context, index) {
-                      final member = controller.pendingMembers[index];
-                      return ListTile(
-                        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
-                        title: Text(member.name),
-                        subtitle: Text('Waiting for approval'),
-                        trailing: ElevatedButton(
-                          onPressed: () => controller.approveMember(member.uid),
-                          child: const Text('Approve'),
+                  controller.errorMessage != null
+                    ? Center(child: Text(controller.errorMessage!, style: const TextStyle(color: Colors.red)))
+                    : controller.pendingMembers.isEmpty
+                      ? const Center(child: Text('No pending requests'))
+                      : ListView.builder(
+                          itemCount: controller.pendingMembers.length,
+                          itemBuilder: (context, index) {
+                            final member = controller.pendingMembers[index];
+                            return ListTile(
+                              leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                              title: Text(member.name),
+                              subtitle: Text('Waiting for approval'),
+                              trailing: ElevatedButton(
+                                onPressed: () => controller.approveMember(member.uid),
+                                child: const Text('Approve'),
+                              ),
+                            );
+                          },
                         ),
-                      );
-                    },
-                  ),
                 ],
               );
             },

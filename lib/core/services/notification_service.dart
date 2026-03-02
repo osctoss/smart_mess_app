@@ -9,16 +9,28 @@ class NotificationService {
     required NotificationType type,
     required String fromUid,
     required String toUid,
+    String? message,
   }) async {
-    await _db.collection('notifications').add({
+    final typeStr = switch (type) {
+      NotificationType.approvalRequest => 'APPROVAL_REQUEST',
+      NotificationType.deleteRequest => 'DELETE_REQUEST',
+      NotificationType.dietAllocated => 'DIET_ALLOCATED',
+      NotificationType.accountDeleted => 'ACCOUNT_DELETED',
+    };
+
+    final data = <String, dynamic>{
       'messId': messId,
-      'type': type.name, // Convert enum to string
+      'type': typeStr,
       'fromUid': fromUid,
       'toUid': toUid,
-      'status': NotificationStatus.pending.name,
+      'status': 'PENDING',
       'createdAt': FieldValue.serverTimestamp(),
-    });
-  }
+    };
 
-  // Add methods to fetch notifications, accept/reject, etc.
+    if (message != null) {
+      data['message'] = message;
+    }
+
+    await _db.collection('notifications').add(data);
+  }
 }

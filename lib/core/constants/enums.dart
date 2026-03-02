@@ -16,6 +16,8 @@ enum AvailabilityStatus {
 enum NotificationType {
   approvalRequest,
   deleteRequest,
+  dietAllocated,
+  accountDeleted,
 }
 
 extension NotificationTypeExtension on NotificationType {

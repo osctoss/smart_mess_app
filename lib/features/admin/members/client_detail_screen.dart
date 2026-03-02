@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../../core/services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../models/user_model.dart';
+import '../../../core/services/notification_service.dart';
+import '../../../core/constants/enums.dart';
 import '../../shared_widgets/custom_button.dart';
 import '../../shared_widgets/custom_text_field.dart';
 
@@ -12,7 +14,6 @@ class ClientDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // In real app, fetch fresh data using user.uid
     final TextEditingController dietController = TextEditingController();
 
     return Scaffold(
@@ -38,20 +39,43 @@ class ClientDetailScreen extends StatelessWidget {
                      return;
                   }
                   
-                  // Update Diet Balance
-                  // Use FirestoreService to increment (could be transaction, but simplified here)
-                  // We need to READ first to get current, or use FieldValue.increment if supported by our service wrapper.
-                  // Our wrapper 'updateData' takes a map. Firestore supports FieldValue.increment.
-                  
                   try {
-                    await FirestoreService().updateData(
-                      path: 'dietBalances/${user!.uid}', 
-                      data: {
+                    final dietRef = FirebaseFirestore.instance
+                        .collection('dietBalances')
+                        .doc(user!.uid);
+                    final dietDoc = await dietRef.get();
+
+                    if (dietDoc.exists) {
+                      await dietRef.update({
                         'totalDiets': FieldValue.increment(amount),
                         'remainingDiets': FieldValue.increment(amount),
                         'lastUpdated': FieldValue.serverTimestamp(),
-                      }
+                      });
+                    } else {
+                      await dietRef.set({
+                        'uid': user!.uid,
+                        'totalDiets': amount,
+                        'remainingDiets': amount,
+                        'lastUpdated': FieldValue.serverTimestamp(),
+                      });
+                    }
+
+                    // Send diet allocation notification to the client
+                    final adminUid = FirebaseAuth.instance.currentUser!.uid;
+                    final adminDoc = await FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(adminUid)
+                        .get();
+                    final messId = adminDoc.data()?['messId'] ?? '';
+
+                    await NotificationService().sendNotification(
+                      messId: messId,
+                      type: NotificationType.dietAllocated,
+                      fromUid: adminUid,
+                      toUid: user!.uid,
+                      message: '$amount diets added',
                     );
+
                     if (!context.mounted) return;
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Diets Added')));
                     Navigator.pop(context);

@@ -12,33 +12,33 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 - Phone number authentication with OTP verification
 - Role-based access control — **Admin** & **Client**
 - Auto-login via splash screen with role-based routing
-- No plaintext passwords, no contact-number-as-ID
+- New clients can skip mess selection during signup and join later
 
 ### 👨‍💼 Admin Panel
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| 2A | **Dashboard** | Quick access to menu, availability, members & notifications |
-| 6 | **Menu Management** | Set/update daily morning & evening meal menus |
-| 7B | **Availability List** | View available clients for each meal; generate attendance records |
-| 8 | **Members Panel** | View all members, manage diet balances, handle deletions |
-| 10 | **Client Detail** | Allocate diets, view individual member info |
-| 5B | **Notifications** | Process approval & delete requests |
+| **Dashboard** | Quick Actions | Access to menu, availability, members & notifications |
+| **Menu Management** | Daily Menus | Set/update morning & evening meal menus |
+| **Availability List** | Meal Tracking | View available clients for each meal; generate attendance records |
+| **Members Panel** | Member Mgmt | View all members, approve/remove, manage diet balances |
+| **Client Detail** | Diet Allocation | Allocate diets to individual members (sends notification) |
+| **Notifications** | Request Handling | Process approval & delete requests |
 
 ### 👤 Client Panel
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| 2B | **Dashboard** | Diet counter, today's menu, availability status |
-| 7A | **Availability** | Toggle ON/OFF for meals (past 30 days view, next 7 days editable) |
-| 4 | **Profile** | View & manage personal profile |
-| 9A | **Change Password** | Firebase password update |
-| 9B | **Change Phone** | Re-authenticate and update contact number |
-| 5A | **Notifications** | View request statuses |
+| **Home Hub** *(NEW)* | Central Landing | Shows joined mess, available messes to join, profile & notifications |
+| **Mess Dashboard** | Mess View | Diet counter, today's menu, availability management |
+| **Availability** | Meal Toggles | Toggle ON/OFF for meals (past 30 days view, next 7 days editable) |
+| **Notifications** | Activity Feed | Diet allocation alerts, removal requests (accept/reject), status updates |
+| **Profile** | Account Mgmt | View profile, change password, change phone number, logout |
 
 ### 🏠 Mess Management
-- **Create a Mess** (Page 3A) — Admins create a new mess group
-- **Select/Join a Mess** (Page 3B) — Clients browse, select, and await approval
+- **Create a Mess** — Admins create a new mess group
+- **Join a Mess** — Clients browse messes from the Home Hub and send join requests
+- **Soft Removal** — Admin removal clears mess association; client retains account and can rejoin
 
 ---
 
@@ -51,11 +51,6 @@ smart_mess_app/
 ├── ios/                              # iOS platform files
 ├── web/ | macos/ | windows/ | linux/ # Other platform targets
 │
-├── assets/
-│   ├── images/
-│   ├── icons/
-│   └── fonts/
-│
 ├── lib/
 │   ├── main.dart                     # App entry point (Firebase init)
 │   ├── app.dart                      # MaterialApp configuration
@@ -64,28 +59,22 @@ smart_mess_app/
 │   │   ├── constants/
 │   │   │   ├── app_colors.dart       # Color palette
 │   │   │   ├── app_strings.dart      # Static strings
-│   │   │   ├── enums.dart            # UserRole, MealType, AvailabilityStatus, etc.
-│   │   │   └── firestore_paths.dart  # Firestore collection path constants
+│   │   │   └── enums.dart            # UserRole, MealType, NotificationType, etc.
 │   │   │
 │   │   ├── theme/
-│   │   │   ├── app_theme.dart        # Light theme definition
-│   │   │   └── text_styles.dart      # Typography styles
+│   │   │   └── app_theme.dart        # Light theme definition
 │   │   │
 │   │   ├── utils/
-│   │   │   ├── validators.dart               # Input validation
-│   │   │   ├── date_utils.dart               # Date formatting helpers
-│   │   │   ├── time_restriction_helper.dart  # Meal cutoff time logic
-│   │   │   └── diet_calculation_helper.dart  # Diet deduction logic
+│   │   │   └── validators.dart       # Input validation
 │   │   │
 │   │   ├── services/
-│   │   │   ├── firebase_service.dart      # Firebase initialization
-│   │   │   ├── auth_service.dart          # Phone auth + OTP
-│   │   │   ├── firestore_service.dart     # Firestore CRUD operations
-│   │   │   └── notification_service.dart  # In-app notifications
+│   │   │   ├── auth_service.dart          # Phone auth + OTP + password linking
+│   │   │   ├── firestore_service.dart     # Firestore CRUD + streams
+│   │   │   ├── notification_service.dart  # Create notifications in Firestore
+│   │   │   └── diet_deduction_service.dart # Daily diet deduction logic
 │   │   │
 │   │   └── routes/
-│   │       ├── app_routes.dart        # Route name constants
-│   │       └── route_generator.dart   # Route generation logic
+│   │       └── app_routes.dart        # Route constants + route generator
 │   │
 │   ├── models/
 │   │   ├── user_model.dart            # User profile + role + mess info
@@ -94,9 +83,9 @@ smart_mess_app/
 │   │   ├── diet_balance_model.dart    # Total & remaining diets
 │   │   ├── availability_model.dart    # Per-meal availability status
 │   │   ├── attendance_model.dart      # Attendance record
-│   │   └── notification_model.dart    # Approval/delete requests
+│   │   └── notification_model.dart    # Notification with type, status, message
 │   │
-│   ├── repositories/                  # Data access layer (Firestore)
+│   ├── repositories/                  # Data access layer (abstract interfaces)
 │   │   ├── auth_repository.dart
 │   │   ├── user_repository.dart
 │   │   ├── mess_repository.dart
@@ -113,31 +102,27 @@ smart_mess_app/
 │       │   ├── signup/               # Registration + OTP
 │       │   ├── otp/                  # OTP verification screen
 │       │   ├── create_mess/          # Admin: create new mess
-│       │   └── select_mess/          # Client: join existing mess
+│       │   └── select_mess/          # Legacy: join mess (now via Home Hub)
 │       │
 │       ├── client/
-│       │   ├── dashboard/            # Diet counter, menu, status
+│       │   ├── home/                 # ★ Home Hub — central landing page
+│       │   ├── dashboard/            # Mess-specific: diet counter, menu, status
 │       │   ├── availability/         # Meal availability toggles
-│       │   ├── notifications/        # Request status view
+│       │   ├── notifications/        # Notification feed with actions
 │       │   └── profile/              # Profile, change password/phone
 │       │
 │       ├── admin/
 │       │   ├── dashboard/            # Admin home with quick actions
 │       │   ├── menu/                 # Set daily menus
 │       │   ├── availability_list/    # View available members
-│       │   ├── members/              # Member list + client detail
+│       │   ├── attendance/           # Record & view attendance
+│       │   ├── members/              # Member list + client detail + diet allocation
 │       │   └── notifications/        # Process approval/delete requests
 │       │
 │       └── shared_widgets/
 │           ├── custom_button.dart
-│           ├── custom_text_field.dart
-│           ├── diet_counter_widget.dart
-│           ├── menu_card_widget.dart
-│           └── availability_toggle_widget.dart
+│           └── custom_text_field.dart
 │
-├── firebase.json                     # Firebase project config
-├── firestore.rules                   # Firestore security rules
-├── firestore.indexes.json            # Firestore composite indexes
 ├── pubspec.yaml                      # Dependencies
 └── README.md
 ```
@@ -158,7 +143,7 @@ smart_mess_app/
 
 ---
 
-## �️ Firestore Data Model
+## 🗄️ Firestore Data Model
 
 All data is scoped by `messId` to ensure multi-tenant isolation.
 
@@ -175,7 +160,7 @@ All data is scoped by `messId` to ensure multi-tenant isolation.
 | `name` | string | Display name |
 | `contactNumber` | string | Phone number |
 | `role` | `"ADMIN"` \| `"CLIENT"` | User role |
-| `messId` | string | Associated mess |
+| `messId` | string \| null | Associated mess (null if not joined) |
 | `approved` | boolean | Admin approval status |
 | `permanentOff` | boolean | Permanently opt out of meals |
 | `morningOff` | boolean | Morning meal opt-out |
@@ -213,9 +198,10 @@ All data is scoped by `messId` to ensure multi-tenant isolation.
 | Field | Type | Description |
 |-------|------|-------------|
 | `messId` | string | Mess reference |
-| `type` | `"APPROVAL_REQUEST"` \| `"DELETE_REQUEST"` | Request type |
+| `type` | `"APPROVAL_REQUEST"` \| `"DELETE_REQUEST"` \| `"DIET_ALLOCATED"` \| `"ACCOUNT_DELETED"` | Notification type |
 | `fromUid` / `toUid` | uid | Sender / receiver |
 | `status` | `"PENDING"` \| `"ACCEPTED"` \| `"REJECTED"` | Current status |
+| `message` | string (optional) | Human-readable detail (e.g. "30 diets added") |
 | `createdAt` | timestamp | Request time |
 
 ### `attendance/{messId_date_meal}` + subcollection `records/{uid}`
@@ -228,17 +214,87 @@ All data is scoped by `messId` to ensure multi-tenant isolation.
 
 > 📌 **Retention rule:** Only the latest **3 attendance documents** per mess are retained.
 
+### 🔗 Firestore Composite Indexes Required
+
+| Collection | Fields | Order |
+|------------|--------|-------|
+| `notifications` | `toUid` (Asc) + `createdAt` (Desc) | Client notifications query |
+| `notifications` | `toUid` (Asc) + `status` (Asc) + `createdAt` (Desc) | Admin notifications query |
+
+> Create these indexes via the Firebase Console or by clicking the link in the debug console error.
+
 ---
 
-## 🔄 Data Flow
+## 🔄 User Flow
 
+### Signup & Login
 ```
-Auth → Fetch user → Route by role
-├── Client → Dashboard → Availability → Diet Deduction
-└── Admin  → Menu → Attendance → Member Management
+Signup → OTP Verification → Login Page
+Login → Splash → Route by Role
+├── Admin (no mess)  → Create Mess → Login
+├── Admin (has mess)  → Admin Dashboard
+└── Client (any)      → Client Home Hub
 ```
 
-### 🍽️ Diet Deduction Logic
+### Client Home Hub (Central Landing)
+```
+Client Home Hub
+├── Has Mess + Approved  → Tap to open Mess Dashboard
+├── Has Mess + Pending   → Shows "Waiting for approval"
+├── No Mess              → Browse & join from available list
+├── Notifications icon   → Notification feed
+└── Profile icon         → Profile management
+```
+
+### Notification Types
+
+| Type | Trigger | Displayed To | Actions |
+|------|---------|-------------|---------|
+| `APPROVAL_REQUEST` | Client joins mess | Admin | Approve / Reject |
+| `DIET_ALLOCATED` | Admin adds diets | Client | Informational (shows amount) |
+| `DELETE_REQUEST` | Admin removes client (diet > 0) | Client | Accept / Reject |
+| `ACCOUNT_DELETED` | Admin removes client (diet = 0) | Client | Informational |
+
+### Member Removal Flow
+```
+Admin clicks Delete
+├── Client has 0 remaining diets
+│   ├── Send ACCOUNT_DELETED notification
+│   ├── Clear messId & approved (soft-delete)
+│   └── Delete dietBalances
+│
+└── Client has remaining diets > 0
+    ├── Send DELETE_REQUEST notification
+    └── Client decides:
+        ├── Accept → Clear messId, delete dietBalances → Home Hub
+        └── Reject → Stay in mess
+```
+
+### Full Flow Diagram
+
+```mermaid
+graph TD
+    A[Splash Screen] -->|Not Authenticated| B[Login Page]
+    A -->|Authenticated| C{Fetch Role}
+    B --> D[Sign Up]
+    D --> E[OTP Verification]
+    E --> B
+    C -->|Admin - no mess| F[Create Mess]
+    C -->|Admin - has mess| G[Admin Dashboard]
+    C -->|Client| H[Client Home Hub]
+    F --> B
+    H -->|Has mess + approved| I[Client Mess Dashboard]
+    H -->|No mess| J[Browse & Join Mess]
+    J -->|Join request sent| H
+    G --> K[Menu / Members / Attendance / Notifications]
+    K -->|Delete member diet=0| L[Soft-delete → Client returns to Home Hub]
+    K -->|Delete member diet>0| M[Delete Request → Client Accept/Reject]
+    K -->|Allocate diet| N[Diet Notification → Client]
+```
+
+---
+
+## 🍽️ Diet Deduction Logic
 For each meal, a diet is deducted if **all** conditions are met:
 - `permanentOff == false`
 - `mealOff == false` (morningOff / eveningOff)
@@ -253,7 +309,7 @@ For each meal, a diet is deducted if **all** conditions are met:
 
 ---
 
-## �🚀 Getting Started
+## 🚀 Getting Started
 
 ### Prerequisites
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (>= 3.10.8)
@@ -283,10 +339,7 @@ For each meal, a diet is deducted if **all** conditions are met:
    flutter pub get
    ```
 
-4. **Deploy Firestore rules & indexes**
-   ```bash
-   firebase deploy --only firestore
-   ```
+4. **Create Firestore composite indexes** (see [Indexes Required](#-firestore-composite-indexes-required) section)
 
 5. **Run the app**
    ```bash
@@ -295,7 +348,7 @@ For each meal, a diet is deducted if **all** conditions are met:
 
 ---
 
-## � Security
+## 🔒 Security
 
 ### Firestore Rules
 - All reads/writes are filtered by `messId`
@@ -316,35 +369,16 @@ For each meal, a diet is deducted if **all** conditions are met:
 
 ---
 
-## �️ System Guarantees
+## 🛡️ System Guarantees
 
 - ✅ No negative diet balance
-- ✅ No cross-mess data access  
+- ✅ No cross-mess data access
 - ✅ Only 3 attendance logs retained per mess
-- ✅ Approval required before client can use the app
+- ✅ Approval required before client can access mess dashboard
 - ✅ Permanent OFF overrides manual meal toggles
 - ✅ Time-restricted availability edits enforced
-
----
-
-## 👥 User Flow
-
-```mermaid
-graph TD
-    A[Splash Screen] --> B{Authenticated?}
-    B -->|No| C[Login Page]
-    B -->|Yes| D{Fetch Role}
-    C --> E[Sign Up]
-    E --> F[OTP Verification]
-    F --> G{Role?}
-    G -->|Admin| H[Create Mess]
-    G -->|Client| I[Select Mess → Await Approval]
-    H --> C
-    I --> C
-    D -->|Admin| J[Admin Dashboard]
-    D -->|Client & Approved| K[Client Dashboard]
-    D -->|Client & Not Approved| L[Waiting for Approval]
-```
+- ✅ Soft-delete on member removal — clients can rejoin after being removed
+- ✅ Real-time notifications for diet allocation, removal, and approvals
 
 ---
 

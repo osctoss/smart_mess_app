@@ -36,7 +36,9 @@ class AdminNotificationsScreen extends StatelessWidget {
             fromUid: data['fromUid'] ?? '',
             toUid: data['toUid'] ?? '',
             status: data['status'] ?? '',
-            createdAt: (data['createdAt'] as Timestamp).toDate(),
+            createdAt: data['createdAt'] != null
+                ? (data['createdAt'] as Timestamp).toDate()
+                : DateTime.now(),
           ),
         ),
         builder: (context, snapshot) {

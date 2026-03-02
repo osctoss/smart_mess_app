@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'availability_list_controller.dart';
+import 'attendance_controller.dart';
 import '../../../core/constants/enums.dart';
 
-class AvailabilityListScreen extends StatelessWidget {
-  const AvailabilityListScreen({super.key});
+class AttendanceScreen extends StatelessWidget {
+  const AttendanceScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => AvailabilityListController(),
+      create: (_) => AttendanceController(),
       child: Scaffold(
-        appBar: AppBar(title: const Text('Availability List')),
-        body: Consumer<AvailabilityListController>(
+        appBar: AppBar(title: const Text('Attendance')),
+        body: Consumer<AttendanceController>(
           builder: (context, controller, _) {
             return Column(
               children: [
@@ -57,32 +57,21 @@ class AvailabilityListScreen extends StatelessWidget {
                   ],
                 ),
                 const Divider(),
-                if (controller.isLoading) 
+                if (controller.isLoading)
                   const LinearProgressIndicator()
-                else 
+                else
                   Expanded(
-                    child: controller.allMembers.isEmpty
-                        ? const Center(child: Text('No members found'))
+                    child: controller.availableMembers.isEmpty
+                        ? const Center(child: Text('No available members'))
                         : ListView.builder(
-                            itemCount: controller.allMembers.length,
+                            itemCount: controller.availableMembers.length,
                             itemBuilder: (context, index) {
-                              final user = controller.allMembers[index];
-                              final isAvailable = controller.isUserAvailable(user.uid);
+                              final user = controller.availableMembers[index];
                               return ListTile(
-                                leading: Icon(
-                                  Icons.circle,
-                                  color: isAvailable ? Colors.green : Colors.red,
-                                  size: 16,
-                                ),
+                                leading: const CircleAvatar(child: Icon(Icons.person)),
                                 title: Text(user.name),
                                 subtitle: Text(user.contactNumber),
-                                trailing: Text(
-                                  isAvailable ? 'Available' : 'Off',
-                                  style: TextStyle(
-                                    color: isAvailable ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                                trailing: const Icon(Icons.check_circle, color: Colors.green),
                               );
                             },
                           ),
@@ -91,7 +80,7 @@ class AvailabilityListScreen extends StatelessWidget {
                   padding: const EdgeInsets.all(16),
                   color: Colors.grey[200],
                   child: Text(
-                    'Available: ${controller.availableCount} / Total: ${controller.allMembers.length}',
+                    'Total Present: ${controller.availableMembers.length}',
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                     textAlign: TextAlign.center,
                   ),

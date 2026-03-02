@@ -129,11 +129,20 @@ class SignupController with ChangeNotifier {
         return;
       }
 
-      // Link email/password credential so user can login with password later
+      // Link email/password credential FIRST so user can login with password later.
+      // This MUST succeed before we create the Firestore user document.
       final email = '$contact@smartmess.com';
-      await _authService.linkEmailPassword(email: email, password: password);
+      try {
+        await _authService.linkEmailPassword(email: email, password: password);
+      } catch (e) {
+        // If linking fails, delete the phone-auth user to avoid orphaned accounts
+        await firebaseUser.delete();
+        _errorMessage = 'Failed to set up password login: $e';
+        notifyListeners();
+        return;
+      }
 
-      // Store user in Firestore
+      // Store user in Firestore (only after linking succeeded)
       await _firestoreService.setData(
         path: 'users/${firebaseUser.uid}',
         data: {
@@ -153,7 +162,7 @@ class SignupController with ChangeNotifier {
       if (_selectedRole == UserRole.admin) {
         Navigator.pushNamedAndRemoveUntil(context, AppRoutes.createMess, (route) => false);
       } else {
-        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.selectMess, (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
       }
     } catch (e) {
       _errorMessage = 'Failed to create account: $e';
