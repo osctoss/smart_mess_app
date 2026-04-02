@@ -127,7 +127,6 @@ class AvailabilityListScreen extends StatelessWidget {
                                             crossAxisAlignment: CrossAxisAlignment.start,
                                             children: [
                                               Text(user.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-                                              Text(user.contactNumber, style: AppTextStyles.bodySmall),
                                             ],
                                           ),
                                         ),
