@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'availability_controller.dart';
 import '../../shared_widgets/glass_card.dart';
+import '../../shared_widgets/custom_button.dart';
 import '../../shared_widgets/gradient_scaffold.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -20,7 +21,7 @@ class AvailabilityScreen extends StatelessWidget {
         body: Consumer<AvailabilityController>(
           builder: (context, controller, _) {
             return SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               child: Column(
                 children: [
                   // Calendar in glass card
@@ -129,6 +130,39 @@ class AvailabilityScreen extends StatelessWidget {
                     index: 2,
                   ),
                 ],
+              ),
+            );
+          },
+        ),
+        bottomNavigationBar: Consumer<AvailabilityController>(
+          builder: (context, controller, _) {
+            return SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 180),
+                opacity: controller.hasUnsavedChanges || controller.isSaving ? 1 : 0.75,
+                child: IgnorePointer(
+                  ignoring: !controller.hasUnsavedChanges && !controller.isSaving,
+                  child: CustomButton(
+                    text: controller.hasUnsavedChanges ? 'Save Changes' : 'No Changes Yet',
+                    icon: Icons.save_rounded,
+                    isLoading: controller.isSaving,
+                    onPressed: () async {
+                      final saved = await controller.saveChanges();
+                      if (!context.mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            saved
+                                ? 'Availability changes saved'
+                                : 'Could not save changes. Please try again.',
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ),
             );
           },

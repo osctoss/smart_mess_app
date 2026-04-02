@@ -9,17 +9,17 @@ class AvailabilityController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
+  final Map<String, bool> _savedAvailability = {};
+  final Map<String, bool> _draftAvailability = {};
+
   DateTime _selectedDate = DateTime.now();
   DateTime get selectedDate => _selectedDate;
 
-  bool _isMorningOn = true;
-  bool get isMorningOn => _isMorningOn;
-  
-  bool _isEveningOn = true;
-  bool get isEveningOn => _isEveningOn;
-
   bool _isLoading = false;
   bool get isLoading => _isLoading;
+
+  bool _isSaving = false;
+  bool get isSaving => _isSaving;
 
   bool _isLockedMorning = false;
   bool get isLockedMorning => _isLockedMorning;
@@ -27,8 +27,18 @@ class AvailabilityController with ChangeNotifier {
   bool _isLockedEvening = false;
   bool get isLockedEvening => _isLockedEvening;
 
-  bool _isPermanentOff = false;
-  bool get isPermanentOff => _isPermanentOff;
+  bool _savedPermanentOff = false;
+  bool? _draftPermanentOff;
+  bool get isPermanentOff => _draftPermanentOff ?? _savedPermanentOff;
+
+  bool get isMorningOn => _availabilityValueFor(_selectedDate, 'MORNING');
+  bool get isEveningOn => _availabilityValueFor(_selectedDate, 'EVENING');
+
+  bool get hasUnsavedChanges {
+    final hasPermanentOffChange =
+        _draftPermanentOff != null && _draftPermanentOff != _savedPermanentOff;
+    return hasPermanentOffChange || _draftAvailability.isNotEmpty;
+  }
 
   String? _messId;
 
@@ -39,23 +49,36 @@ class AvailabilityController with ChangeNotifier {
   Future<void> _initialize() async {
     _isLoading = true;
     notifyListeners();
+
     final user = _auth.currentUser;
-    if (user != null) {
-      final userDoc = await _firestoreService.documentStream(
-         path: 'users/${user.uid}',
-         builder: (data, id) => UserModel(
-            uid: id,
-            name: '', contactNumber: '', role: '', createdAt: DateTime.now(),
-            messId: data['messId'],
-            permanentOff: data['permanentOff'] ?? false,
-         ),
-      ).first;
+    if (user == null) {
+      _isLoading = false;
+      notifyListeners();
+      return;
+    }
+
+    try {
+      final userDoc = await _firestoreService
+          .documentStream(
+            path: 'users/${user.uid}',
+            builder: (data, id) => UserModel(
+              uid: id,
+              name: '',
+              contactNumber: '',
+              role: '',
+              createdAt: DateTime.now(),
+              messId: data['messId'],
+              permanentOff: data['permanentOff'] ?? false,
+            ),
+          )
+          .first;
+
       _messId = userDoc.messId;
-      _isPermanentOff = userDoc.permanentOff;
+      _savedPermanentOff = userDoc.permanentOff;
       await _loadAvailability(_selectedDate);
-    } else {
-       _isLoading = false;
-       notifyListeners();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 
@@ -64,9 +87,18 @@ class AvailabilityController with ChangeNotifier {
     _loadAvailability(date);
   }
 
-  /// Helper to build the availability document ID
   String _availabilityDocId(String uid, String dateStr, String meal) {
     return '${uid}_${dateStr}_$meal';
+  }
+
+  String _availabilityKey(DateTime date, String meal) {
+    final dateStr = DateFormat('yyyy-MM-dd').format(date);
+    return '${dateStr}_$meal';
+  }
+
+  bool _availabilityValueFor(DateTime date, String meal) {
+    final key = _availabilityKey(date, meal);
+    return _draftAvailability[key] ?? _savedAvailability[key] ?? true;
   }
 
   Future<void> _loadAvailability(DateTime date) async {
@@ -74,66 +106,29 @@ class AvailabilityController with ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Check Locks (Strict 7 AM / 3 PM)
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      
-      if (date.isBefore(today)) {
-         _isLockedMorning = true;
-         _isLockedEvening = true;
-      } else if (date.isAfter(today)) {
-         _isLockedMorning = false;
-         _isLockedEvening = false;
+      final selectedDay = DateTime(date.year, date.month, date.day);
+
+      if (selectedDay.isBefore(today)) {
+        _isLockedMorning = true;
+        _isLockedEvening = true;
+      } else if (selectedDay.isAfter(today)) {
+        _isLockedMorning = false;
+        _isLockedEvening = false;
       } else {
-         // Today
-         _isLockedMorning = now.hour >= 7;
-         _isLockedEvening = now.hour >= 15;
+        _isLockedMorning = now.hour >= 7;
+        _isLockedEvening = now.hour >= 15;
       }
 
-      // 2. Fetch existing availability status from Firestore
       final user = _auth.currentUser;
-      if (_messId != null && user != null) {
-        final dateStr = DateFormat('yyyy-MM-dd').format(date);
-
-        // Fetch morning availability
-        final morningDocId = _availabilityDocId(user.uid, dateStr, 'MORNING');
-        try {
-          final morningDoc = await _firestoreService.documentStream(
-            path: 'availability/$morningDocId',
-            builder: (data, id) => AvailabilityModel(
-              uid: data['uid'] ?? '',
-              messId: data['messId'] ?? '',
-              date: data['date'] ?? '',
-              meal: data['meal'] ?? '',
-              status: data['status'] ?? 'ON',
-            ),
-          ).first;
-          _isMorningOn = morningDoc.status != 'OFF';
-        } catch (e) {
-          // Doc doesn't exist — default to ON
-          _isMorningOn = true;
-        }
-
-        // Fetch evening availability
-        final eveningDocId = _availabilityDocId(user.uid, dateStr, 'EVENING');
-        try {
-          final eveningDoc = await _firestoreService.documentStream(
-            path: 'availability/$eveningDocId',
-            builder: (data, id) => AvailabilityModel(
-              uid: data['uid'] ?? '',
-              messId: data['messId'] ?? '',
-              date: data['date'] ?? '',
-              meal: data['meal'] ?? '',
-              status: data['status'] ?? 'ON',
-            ),
-          ).first;
-          _isEveningOn = eveningDoc.status != 'OFF';
-        } catch (e) {
-          // Doc doesn't exist — default to ON
-          _isEveningOn = true;
-        }
+      if (_messId == null || user == null) {
+        return;
       }
-      
+
+      final dateStr = DateFormat('yyyy-MM-dd').format(date);
+      await _loadMealAvailability(user.uid, dateStr, 'MORNING');
+      await _loadMealAvailability(user.uid, dateStr, 'EVENING');
     } catch (e) {
       debugPrint('Error loading availability: $e');
     } finally {
@@ -142,67 +137,117 @@ class AvailabilityController with ChangeNotifier {
     }
   }
 
-  Future<void> togglePermanentOff(bool value) async {
-     _isLoading = true;
-     notifyListeners();
-     try {
-       final user = _auth.currentUser;
-       if (user != null) {
-          await _firestoreService.updateData(
-             path: 'users/${user.uid}',
-             data: {'permanentOff': value},
-          );
-          _isPermanentOff = value;
-       }
-     } finally {
-       _isLoading = false;
-       notifyListeners();
-     }
+  Future<void> _loadMealAvailability(
+    String uid,
+    String dateStr,
+    String meal,
+  ) async {
+    final docId = _availabilityDocId(uid, dateStr, meal);
+    final key = '${dateStr}_$meal';
+
+    try {
+      final doc = await _firestoreService
+          .documentStream(
+            path: 'availability/$docId',
+            builder: (data, id) => AvailabilityModel(
+              uid: data['uid'] ?? '',
+              messId: data['messId'] ?? '',
+              date: data['date'] ?? '',
+              meal: data['meal'] ?? '',
+              status: data['status'] ?? 'ON',
+            ),
+          )
+          .first;
+      _savedAvailability[key] = doc.status != 'OFF';
+    } catch (_) {
+      _savedAvailability[key] = true;
+    }
   }
 
-  Future<void> toggleMorning(bool value) async {
+  void togglePermanentOff(bool value) {
+    _draftPermanentOff = value;
+    if (_draftPermanentOff == _savedPermanentOff) {
+      _draftPermanentOff = null;
+    }
+    notifyListeners();
+  }
+
+  void toggleMorning(bool value) {
     if (_isLockedMorning) return;
-    _isMorningOn = value;
-    notifyListeners();
-
-    final user = _auth.currentUser;
-    if (user == null || _messId == null) return;
-
-    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final docId = _availabilityDocId(user.uid, dateStr, 'MORNING');
-
-    await _firestoreService.setData(
-      path: 'availability/$docId',
-      data: {
-        'uid': user.uid,
-        'messId': _messId,
-        'date': dateStr,
-        'meal': 'MORNING',
-        'status': value ? 'ON' : 'OFF',
-      },
-    );
+    _setDraftAvailability(_selectedDate, 'MORNING', value);
   }
 
-  Future<void> toggleEvening(bool value) async {
+  void toggleEvening(bool value) {
     if (_isLockedEvening) return;
-    _isEveningOn = value;
+    _setDraftAvailability(_selectedDate, 'EVENING', value);
+  }
+
+  void _setDraftAvailability(DateTime date, String meal, bool value) {
+    final key = _availabilityKey(date, meal);
+    final savedValue = _savedAvailability[key] ?? true;
+
+    if (value == savedValue) {
+      _draftAvailability.remove(key);
+    } else {
+      _draftAvailability[key] = value;
+    }
+
     notifyListeners();
+  }
+
+  Future<bool> saveChanges() async {
+    if (!hasUnsavedChanges || _isSaving) {
+      return true;
+    }
 
     final user = _auth.currentUser;
-    if (user == null || _messId == null) return;
+    if (user == null || _messId == null) {
+      return false;
+    }
 
-    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-    final docId = _availabilityDocId(user.uid, dateStr, 'EVENING');
+    _isSaving = true;
+    notifyListeners();
 
-    await _firestoreService.setData(
-      path: 'availability/$docId',
-      data: {
-        'uid': user.uid,
-        'messId': _messId,
-        'date': dateStr,
-        'meal': 'EVENING',
-        'status': value ? 'ON' : 'OFF',
-      },
-    );
+    try {
+      if (_draftPermanentOff != null &&
+          _draftPermanentOff != _savedPermanentOff) {
+        await _firestoreService.updateData(
+          path: 'users/${user.uid}',
+          data: {'permanentOff': _draftPermanentOff},
+        );
+        _savedPermanentOff = _draftPermanentOff!;
+        _draftPermanentOff = null;
+      }
+
+      final draftEntries = _draftAvailability.entries.toList();
+      for (final entry in draftEntries) {
+        final parts = entry.key.split('_');
+        final dateStr = parts[0];
+        final meal = parts[1];
+        final docId = _availabilityDocId(user.uid, dateStr, meal);
+
+        await _firestoreService.setData(
+          path: 'availability/$docId',
+          data: {
+            'uid': user.uid,
+            'messId': _messId,
+            'date': dateStr,
+            'meal': meal,
+            'status': entry.value ? 'ON' : 'OFF',
+          },
+        );
+
+        _savedAvailability[entry.key] = entry.value;
+        _draftAvailability.remove(entry.key);
+      }
+
+      return true;
+    } catch (e) {
+      debugPrint('Error saving availability: $e');
+      return false;
+    } finally {
+      _isSaving = false;
+      notifyListeners();
+    }
   }
 }
