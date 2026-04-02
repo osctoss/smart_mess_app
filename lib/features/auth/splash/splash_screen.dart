@@ -93,7 +93,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   gradient: AppColors.primaryGradient,
                   boxShadow: [
                     BoxShadow(
-                      color: AppColors.accentOrange.withOpacity(0.4),
+                      color: AppColors.accentOrange.withValues(alpha: 0.4),
                       blurRadius: 40,
                       spreadRadius: 5,
                     ),
@@ -149,7 +149,7 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 40,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  color: AppColors.accentOrange.withOpacity(0.7),
+                  color: AppColors.accentOrange.withValues(alpha: 0.7),
                 ),
               )
                   .animate()

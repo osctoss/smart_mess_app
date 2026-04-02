@@ -36,7 +36,7 @@ class ClientDetailScreen extends StatelessWidget {
                 gradient: AppColors.blueGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentBlue.withOpacity(0.3),
+                    color: AppColors.accentBlue.withValues(alpha: 0.3),
                     blurRadius: 24,
                     spreadRadius: 2,
                   ),

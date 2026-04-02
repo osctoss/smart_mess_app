@@ -25,9 +25,9 @@ class AppColors {
   static const Color info = accentBlue;
 
   // ── Glass Effect ──
-  static Color glassBackground = Colors.white.withOpacity(0.05);
-  static Color glassBorder = Colors.white.withOpacity(0.10);
-  static Color glassHighlight = Colors.white.withOpacity(0.08);
+  static Color glassBackground = Colors.white.withValues(alpha: 0.05);
+  static Color glassBorder = Colors.white.withValues(alpha: 0.10);
+  static Color glassHighlight = Colors.white.withValues(alpha: 0.08);
 
   // ── Gradients ──
   static const LinearGradient primaryGradient = LinearGradient(

@@ -67,15 +67,15 @@ class AvailabilityScreen extends StatelessWidget {
 
                   // Permanent OFF toggle
                   GlassCard(
-                    borderColor: controller.isPermanentOff ? AppColors.accentRose.withOpacity(0.4) : null,
-                    backgroundColor: controller.isPermanentOff ? AppColors.accentRose.withOpacity(0.08) : null,
+                    borderColor: controller.isPermanentOff ? AppColors.accentRose.withValues(alpha: 0.4) : null,
+                    backgroundColor: controller.isPermanentOff ? AppColors.accentRose.withValues(alpha: 0.08) : null,
                     child: Row(
                       children: [
                         Container(
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: AppColors.accentRose.withOpacity(0.15),
+                            color: AppColors.accentRose.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Icon(Icons.block_rounded, color: AppColors.accentRose, size: 22),
@@ -94,8 +94,8 @@ class AvailabilityScreen extends StatelessWidget {
                         Switch(
                           value: controller.isPermanentOff,
                           onChanged: (val) => controller.togglePermanentOff(val),
-                          activeColor: AppColors.accentRose,
-                          activeTrackColor: AppColors.accentRose.withOpacity(0.3),
+                          activeThumbColor: AppColors.accentRose,
+                          activeTrackColor: AppColors.accentRose.withValues(alpha: 0.3),
                         ),
                       ],
                     ),

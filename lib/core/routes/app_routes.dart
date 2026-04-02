@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../features/auth/splash/splash_screen.dart';
 import '../../features/auth/login/login_screen.dart';
 import '../../features/auth/signup/signup_screen.dart';
-import '../../features/auth/otp/otp_screen.dart';
 import '../../features/auth/create_mess/create_mess_screen.dart';
 import '../../features/auth/select_mess/select_mess_screen.dart';
 import '../../features/client/dashboard/client_dashboard.dart';

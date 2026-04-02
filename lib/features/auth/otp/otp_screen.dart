@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -144,7 +145,7 @@ class _OTPScreenState extends State<OTPScreen> {
     }
   }
 
-  Future<void> _signInWithCredential(credential) async {
+  Future<void> _signInWithCredential(PhoneAuthCredential credential) async {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -163,7 +164,7 @@ class _OTPScreenState extends State<OTPScreen> {
     }
   }
 
-  void _handleAuthSuccess(credentials) {
+  void _handleAuthSuccess(UserCredential credentials) {
     Navigator.pop(context, credentials);
   }
 
@@ -186,7 +187,7 @@ class _OTPScreenState extends State<OTPScreen> {
                 gradient: AppColors.blueGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentBlue.withOpacity(0.3),
+                    color: AppColors.accentBlue.withValues(alpha: 0.3),
                     blurRadius: 32,
                     spreadRadius: 4,
                   ),
@@ -295,7 +296,7 @@ class _OTPScreenState extends State<OTPScreen> {
           contentPadding: const EdgeInsets.symmetric(vertical: 14),
           filled: true,
           fillColor: _digitControllers[index].text.isNotEmpty
-              ? AppColors.accentOrange.withOpacity(0.1)
+              ? AppColors.accentOrange.withValues(alpha: 0.1)
               : AppColors.surfaceLight,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
@@ -305,7 +306,7 @@ class _OTPScreenState extends State<OTPScreen> {
             borderRadius: BorderRadius.circular(14),
             borderSide: BorderSide(
               color: _digitControllers[index].text.isNotEmpty
-                  ? AppColors.accentOrange.withOpacity(0.5)
+                  ? AppColors.accentOrange.withValues(alpha: 0.5)
                   : AppColors.glassBorder,
             ),
           ),

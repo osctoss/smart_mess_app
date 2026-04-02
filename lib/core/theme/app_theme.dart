@@ -114,7 +114,7 @@ class AppTheme {
       }),
       trackColor: WidgetStateProperty.resolveWith((states) {
         return states.contains(WidgetState.selected)
-            ? AppColors.accentTeal.withOpacity(0.3)
+            ? AppColors.accentTeal.withValues(alpha: 0.3)
             : AppColors.surfaceLight;
       }),
     ),
@@ -122,7 +122,7 @@ class AppTheme {
     // ── Chip ──
     chipTheme: ChipThemeData(
       backgroundColor: AppColors.surfaceLight,
-      selectedColor: AppColors.accentOrange.withOpacity(0.2),
+      selectedColor: AppColors.accentOrange.withValues(alpha: 0.2),
       labelStyle: GoogleFonts.inter(
         color: AppColors.textPrimary,
         fontSize: 14,

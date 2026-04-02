@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
@@ -57,7 +56,7 @@ class AdminNotificationsScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.check_circle_outline_rounded, size: 64, color: AppColors.accentTeal.withOpacity(0.5)),
+                  Icon(Icons.check_circle_outline_rounded, size: 64, color: AppColors.accentTeal.withValues(alpha: 0.5)),
                   const SizedBox(height: 16),
                   Text('All caught up!', style: AppTextStyles.heading3.copyWith(color: AppColors.textSecondary)),
                   const SizedBox(height: 8),
@@ -98,7 +97,7 @@ class AdminNotificationsScreen extends StatelessWidget {
                           width: 40,
                           height: 40,
                           decoration: BoxDecoration(
-                            color: AppColors.accentAmber.withOpacity(0.15),
+                            color: AppColors.accentAmber.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Center(
@@ -153,9 +152,9 @@ class AdminNotificationsScreen extends StatelessWidget {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentTeal.withOpacity(0.15),
+                                  color: AppColors.accentTeal.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.accentTeal.withOpacity(0.3)),
+                                  border: Border.all(color: AppColors.accentTeal.withValues(alpha: 0.3)),
                                 ),
                                 child: Icon(Icons.check_rounded, color: AppColors.accentTeal, size: 18),
                               ),
@@ -172,9 +171,9 @@ class AdminNotificationsScreen extends StatelessWidget {
                                 width: 36,
                                 height: 36,
                                 decoration: BoxDecoration(
-                                  color: AppColors.accentRose.withOpacity(0.15),
+                                  color: AppColors.accentRose.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: AppColors.accentRose.withOpacity(0.3)),
+                                  border: Border.all(color: AppColors.accentRose.withValues(alpha: 0.3)),
                                 ),
                                 child: Icon(Icons.close_rounded, color: AppColors.accentRose, size: 18),
                               ),

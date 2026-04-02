@@ -17,7 +17,7 @@ class AppDecorations {
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.2),
+          color: Colors.black.withValues(alpha: 0.2),
           blurRadius: 20,
           offset: const Offset(0, 8),
         ),
@@ -35,7 +35,7 @@ class AppDecorations {
       borderRadius: BorderRadius.circular(borderRadius),
       boxShadow: [
         BoxShadow(
-          color: AppColors.accentOrange.withOpacity(0.3),
+          color: AppColors.accentOrange.withValues(alpha: 0.3),
           blurRadius: 16,
           offset: const Offset(0, 6),
         ),
@@ -69,7 +69,7 @@ class AppDecorations {
       border: Border.all(color: AppColors.glassBorder),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.15),
+          color: Colors.black.withValues(alpha: 0.15),
           blurRadius: 16,
           offset: const Offset(0, 6),
         ),
@@ -87,7 +87,7 @@ class AppDecorations {
       shape: BoxShape.circle,
       boxShadow: [
         BoxShadow(
-          color: gradient.colors.first.withOpacity(0.3),
+          color: gradient.colors.first.withValues(alpha: 0.3),
           blurRadius: 12,
           offset: const Offset(0, 4),
         ),

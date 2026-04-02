@@ -56,8 +56,8 @@ class _CustomButtonState extends State<CustomButton> {
             gradient: widget.isLoading
                 ? LinearGradient(
                     colors: [
-                      AppColors.accentOrange.withOpacity(0.5),
-                      AppColors.accentRose.withOpacity(0.5),
+                      AppColors.accentOrange.withValues(alpha: 0.5),
+                      AppColors.accentRose.withValues(alpha: 0.5),
                     ],
                   )
                 : (widget.gradient ?? AppColors.primaryGradient),
@@ -66,7 +66,7 @@ class _CustomButtonState extends State<CustomButton> {
                 ? []
                 : [
                     BoxShadow(
-                      color: AppColors.accentOrange.withOpacity(0.3),
+                      color: AppColors.accentOrange.withValues(alpha: 0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),

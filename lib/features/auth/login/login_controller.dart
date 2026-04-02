@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/firestore_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/routes/app_routes.dart';
 import '../../../models/user_model.dart';
 
 class LoginController with ChangeNotifier {
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
 
   final TextEditingController contactController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();

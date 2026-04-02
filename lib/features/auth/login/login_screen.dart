@@ -36,7 +36,7 @@ class LoginScreen extends StatelessWidget {
                       gradient: AppColors.primaryGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accentOrange.withOpacity(0.3),
+                          color: AppColors.accentOrange.withValues(alpha: 0.3),
                           blurRadius: 24,
                           spreadRadius: 2,
                         ),

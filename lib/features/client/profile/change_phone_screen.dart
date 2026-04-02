@@ -29,7 +29,7 @@ class ChangePhoneScreen extends StatelessWidget {
                 gradient: AppColors.tealGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.accentTeal.withOpacity(0.3),
+                    color: AppColors.accentTeal.withValues(alpha: 0.3),
                     blurRadius: 24,
                   ),
                 ],

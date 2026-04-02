@@ -35,7 +35,7 @@ class CreateMessScreen extends StatelessWidget {
                       gradient: AppColors.amberGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accentAmber.withOpacity(0.3),
+                          color: AppColors.accentAmber.withValues(alpha: 0.3),
                           blurRadius: 28,
                           spreadRadius: 4,
                         ),

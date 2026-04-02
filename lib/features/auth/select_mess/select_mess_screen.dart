@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'select_mess_controller.dart';
 import '../../shared_widgets/glass_card.dart';
 import '../../shared_widgets/gradient_scaffold.dart';

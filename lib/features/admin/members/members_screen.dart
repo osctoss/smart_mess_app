@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'members_controller.dart';
 import '../../shared_widgets/glass_card.dart';
 import '../../shared_widgets/gradient_scaffold.dart';
@@ -111,7 +110,7 @@ class MembersScreen extends StatelessWidget {
                                           width: 36,
                                           height: 36,
                                           decoration: BoxDecoration(
-                                            color: AppColors.accentRose.withOpacity(0.12),
+                                            color: AppColors.accentRose.withValues(alpha: 0.12),
                                             borderRadius: BorderRadius.circular(10),
                                           ),
                                           child: Icon(Icons.delete_rounded, color: AppColors.accentRose, size: 18),
@@ -137,7 +136,7 @@ class MembersScreen extends StatelessWidget {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.check_circle_rounded, size: 56, color: AppColors.accentTeal.withOpacity(0.5)),
+                                  Icon(Icons.check_circle_rounded, size: 56, color: AppColors.accentTeal.withValues(alpha: 0.5)),
                                   const SizedBox(height: 12),
                                   Text('No pending requests', style: AppTextStyles.subtitle),
                                 ],
@@ -153,7 +152,7 @@ class MembersScreen extends StatelessWidget {
                                   child: Padding(
                                     padding: const EdgeInsets.only(bottom: 10),
                                     child: GlassCard(
-                                      borderColor: AppColors.accentAmber.withOpacity(0.3),
+                                      borderColor: AppColors.accentAmber.withValues(alpha: 0.3),
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                                       child: Row(
                                         children: [

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'admin_dashboard_controller.dart';
 import '../../shared_widgets/glass_card.dart';
 import '../../shared_widgets/gradient_scaffold.dart';
@@ -117,7 +116,7 @@ class AdminDashboard extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: item.gradient.colors.first.withOpacity(0.3),
+                  color: item.gradient.colors.first.withValues(alpha: 0.3),
                   blurRadius: 16,
                   offset: const Offset(0, 6),
                 ),

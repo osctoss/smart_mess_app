@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'availability_list_controller.dart';
 import '../../../core/constants/enums.dart';
@@ -207,7 +206,7 @@ class AvailabilityListScreen extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.accentOrange.withOpacity(0.15) : AppColors.surfaceLight,
+          color: isSelected ? AppColors.accentOrange.withValues(alpha: 0.15) : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: isSelected ? AppColors.accentOrange : AppColors.glassBorder,

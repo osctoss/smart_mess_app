@@ -175,7 +175,7 @@ class _RoleChip extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.accentOrange.withOpacity(0.15)
+              ? AppColors.accentOrange.withValues(alpha: 0.15)
               : AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
