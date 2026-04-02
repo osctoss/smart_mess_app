@@ -78,14 +78,9 @@ class AdminDashboard extends StatelessWidget {
 
             return Padding(
               padding: const EdgeInsets.all(16),
-              child: GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 1.05,
-                ),
+              child: ListView.separated(
                 itemCount: items.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 16),
                 itemBuilder: (context, index) {
                   final item = items[index];
                   return AnimatedListItem(
@@ -102,41 +97,55 @@ class AdminDashboard extends StatelessWidget {
   }
 
   Widget _buildDashboardCard(BuildContext context, _DashboardItem item) {
-    return GlassCard(
-      onTap: () => Navigator.pushNamed(context, item.route),
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: item.gradient,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: item.gradient.colors.first.withValues(alpha: 0.3),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+    return SizedBox(
+      height: 132,
+      child: GlassCard(
+        onTap: () => Navigator.pushNamed(context, item.route),
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+        child: Row(
+          children: [
+            Container(
+              width: 68,
+              height: 68,
+              decoration: BoxDecoration(
+                gradient: item.gradient,
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: item.gradient.colors.first.withValues(alpha: 0.3),
+                    blurRadius: 18,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: Icon(item.icon, color: Colors.white, size: 32),
             ),
-            child: Icon(item.icon, color: Colors.white, size: 28),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            item.title,
-            style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            item.subtitle,
-            style: AppTextStyles.bodySmall,
-            textAlign: TextAlign.center,
-          ),
-        ],
+            const SizedBox(width: 18),
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    item.title,
+                    style: AppTextStyles.heading4.copyWith(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    item.subtitle,
+                    style: AppTextStyles.bodyMedium,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.textSecondary.withValues(alpha: 0.8),
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }
