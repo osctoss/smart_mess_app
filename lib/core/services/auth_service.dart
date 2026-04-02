@@ -77,6 +77,32 @@ class AuthService {
     );
   }
 
+  Future<void> reauthenticateWithEmailPassword({
+    required String email,
+    required String password,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No authenticated user found.');
+    }
+
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: password,
+    );
+
+    await user.reauthenticateWithCredential(credential);
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No authenticated user found.');
+    }
+
+    await user.updatePassword(newPassword);
+  }
+
   Future<void> signOut() async {
     await _auth.signOut();
   }
