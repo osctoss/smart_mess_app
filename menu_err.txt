@@ -1,0 +1,6 @@
+﻿Analyzing menu_screen.dart...
+
+  error - menu_screen.dart:33:19 - The expression doesn't evaluate to a function, so it can't be invoked. - invocation_of_non_function_expression
+  error - menu_screen.dart:77:19 - The expression doesn't evaluate to a function, so it can't be invoked. - invocation_of_non_function_expression
+
+2 issues found.

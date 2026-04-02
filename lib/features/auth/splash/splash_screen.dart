@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/routes/app_routes.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../../models/user_model.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -19,7 +22,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _checkAuth() async {
-    await Future.delayed(const Duration(seconds: 2)); // Show splash for 2 seconds
+    await Future.delayed(const Duration(seconds: 3));
     if (!mounted) return;
 
     final user = FirebaseAuth.instance.currentUser;
@@ -31,8 +34,6 @@ class _SplashScreenState extends State<SplashScreen> {
       try {
         final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
         if (!doc.exists) {
-          // User exists in Auth but not in Firestore? Should likely logout or go to specialized setup.
-          // For now, logout and go to login to be safe.
           await FirebaseAuth.instance.signOut();
           if (!mounted) return;
           Navigator.pushReplacementNamed(context, AppRoutes.login);
@@ -59,36 +60,102 @@ class _SplashScreenState extends State<SplashScreen> {
             Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
           }
         } else {
-          // CLIENT — always go to home hub
           Navigator.pushReplacementNamed(context, AppRoutes.clientHome);
         }
       } catch (e) {
-        // Handle error (e.g., offline)
-        // Ensure to navigate somewhere or show error retry
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-        // Maybe stay on splash with a retry button? or go to login
-        // develop retry logic later. for now, let's just show error.
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.restaurant_menu, size: 80, color: Colors.orange),
-            SizedBox(height: 16),
-            Text(
-              'Smart Mess App',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 24),
-            CircularProgressIndicator(),
-          ],
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [AppColors.scaffoldDark, Color(0xFF16162A), AppColors.scaffoldDark],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Animated icon with glow
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppColors.primaryGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.accentOrange.withOpacity(0.4),
+                      blurRadius: 40,
+                      spreadRadius: 5,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.restaurant_menu_rounded,
+                  size: 56,
+                  color: Colors.white,
+                ),
+              )
+                  .animate()
+                  .scale(
+                    begin: const Offset(0.5, 0.5),
+                    end: const Offset(1.0, 1.0),
+                    duration: 800.ms,
+                    curve: Curves.elasticOut,
+                  )
+                  .fadeIn(duration: 600.ms),
+
+              const SizedBox(height: 32),
+
+              // App name
+              Text(
+                'Smart Mess',
+                style: AppTextStyles.heading1.copyWith(
+                  fontSize: 36,
+                  letterSpacing: -1,
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 400.ms, duration: 600.ms)
+                  .slideY(begin: 0.3, end: 0, delay: 400.ms, duration: 600.ms),
+
+              const SizedBox(height: 8),
+
+              // Tagline
+              Text(
+                'Your dining, simplified',
+                style: AppTextStyles.subtitle.copyWith(
+                  color: AppColors.textSecondary,
+                  fontSize: 16,
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 700.ms, duration: 600.ms),
+
+              const SizedBox(height: 48),
+
+              // Loading indicator
+              SizedBox(
+                width: 40,
+                height: 40,
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: AppColors.accentOrange.withOpacity(0.7),
+                ),
+              )
+                  .animate()
+                  .fadeIn(delay: 1000.ms, duration: 600.ms),
+            ],
+          ),
         ),
       ),
     );

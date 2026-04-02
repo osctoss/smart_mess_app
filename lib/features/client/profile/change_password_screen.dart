@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../shared_widgets/custom_button.dart';
 import '../../shared_widgets/custom_text_field.dart';
+import '../../shared_widgets/glass_card.dart';
+import '../../shared_widgets/gradient_scaffold.dart';
 
 class ChangePasswordScreen extends StatefulWidget {
   const ChangePasswordScreen({super.key});
@@ -55,9 +60,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       await _authService.reauthenticateWithEmailPassword(
@@ -73,8 +76,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       _showMessage('Password updated successfully.');
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      final message = e.code == 'wrong-password' ||
-              e.code == 'invalid-credential'
+      final message = e.code == 'wrong-password' || e.code == 'invalid-credential'
           ? 'Old password is incorrect.'
           : (e.message ?? 'Failed to update password.');
       _showMessage(message);
@@ -82,11 +84,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
       if (!mounted) return;
       _showMessage('Failed to update password: $e');
     } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -98,21 +96,59 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Change Password')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
-            CustomTextField(controller: oldPassController, label: 'Old Password', obscureText: true),
-            const SizedBox(height: 16),
-            CustomTextField(controller: newPassController, label: 'New Password', obscureText: true),
+            // Icon
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.blueGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.accentBlue.withOpacity(0.3),
+                    blurRadius: 24,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.lock_rounded, color: Colors.white, size: 32),
+            ).animate().scale(begin: const Offset(0.5, 0.5), end: const Offset(1, 1), duration: 500.ms, curve: Curves.elasticOut),
+
             const SizedBox(height: 24),
-            CustomButton(
-              text: 'Update Password',
-              isLoading: _isLoading,
-              onPressed: _updatePassword,
-            ),
+            Text('Update Password', style: AppTextStyles.heading3).animate().fadeIn(delay: 200.ms),
+            const SizedBox(height: 24),
+
+            GlassCard(
+              child: Column(
+                children: [
+                  CustomTextField(
+                    controller: oldPassController,
+                    label: 'Old Password',
+                    prefixIcon: Icons.lock_outline_rounded,
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 16),
+                  CustomTextField(
+                    controller: newPassController,
+                    label: 'New Password',
+                    prefixIcon: Icons.lock_rounded,
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 28),
+                  CustomButton(
+                    text: 'Update Password',
+                    icon: Icons.save_rounded,
+                    isLoading: _isLoading,
+                    onPressed: _updatePassword,
+                  ),
+                ],
+              ),
+            ).animate().fadeIn(delay: 300.ms, duration: 600.ms).slideY(begin: 0.1, end: 0, delay: 300.ms, duration: 600.ms),
           ],
         ),
       ),

@@ -1,9 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../../core/services/firestore_service.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
 import '../../../models/notification_model.dart';
-
+import '../../shared_widgets/glass_card.dart';
+import '../../shared_widgets/gradient_scaffold.dart';
+import '../../shared_widgets/animated_list_item.dart';
+import '../../shared_widgets/shimmer_loading.dart';
 
 class AdminNotificationsScreen extends StatelessWidget {
   const AdminNotificationsScreen({super.key});
@@ -11,23 +17,22 @@ class AdminNotificationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return const Scaffold(body: Center(child: Text('Not logged in')));
+    if (user == null) {
+      return GradientScaffold(
+        body: Center(child: Text('Not logged in', style: AppTextStyles.bodyMedium)),
+      );
+    }
 
     final FirestoreService firestoreService = FirestoreService();
 
-    // Need to fetch Admin's Mess ID first to filter notifications for their mess
-    // Or queried by 'toUid' if notifications are sent to Admin UID.
-    // In SelectMessController, we sent to `mess.createdBy` (Admin UID). 
-    // So querying by `toUid` is correct.
-
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('Admin Notifications')),
       body: StreamBuilder<List<NotificationModel>>(
         stream: firestoreService.collectionStream(
           path: 'notifications',
           queryBuilder: (query) => query
               .where('toUid', isEqualTo: user.uid)
-              .where('status', isEqualTo: 'PENDING') // Show only pending
+              .where('status', isEqualTo: 'PENDING')
               .orderBy('createdAt', descending: true),
           builder: (data, id) => NotificationModel(
             notificationId: id,
@@ -43,53 +48,142 @@ class AdminNotificationsScreen extends StatelessWidget {
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ShimmerLoading.listPlaceholder();
           }
           final notifications = snapshot.data ?? [];
 
           if (notifications.isEmpty) {
-             return const Center(child: Text('No pending notifications'));
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_outline_rounded, size: 64, color: AppColors.accentTeal.withOpacity(0.5)),
+                  const SizedBox(height: 16),
+                  Text('All caught up!', style: AppTextStyles.heading3.copyWith(color: AppColors.textSecondary)),
+                  const SizedBox(height: 8),
+                  Text('No pending notifications', style: AppTextStyles.subtitle),
+                ],
+              ),
+            );
           }
 
           return ListView.builder(
+            padding: const EdgeInsets.all(16),
             itemCount: notifications.length,
             itemBuilder: (context, index) {
               final notification = notifications[index];
-              return Card(
-                child: ListTile(
-                  title: Text(notification.type.replaceAll('_', ' ')),
-                  subtitle: Text('From: ${notification.fromUid}'), // Fetch name ideally
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.check, color: Colors.green),
-                        onPressed: () async {
-                           // Approve Logic
-                           if (notification.type == 'APPROVAL_REQUEST') {
-                             await firestoreService.updateData(
-                               path: 'users/${notification.fromUid}',
-                               data: {'approved': true, 'role': 'CLIENT', 'messId': notification.messId}, 
-                             );
-                           }
-                           // Update Notification Status
-                           await firestoreService.updateData(
-                             path: 'notifications/${notification.notificationId}',
-                             data: {'status': 'ACCEPTED'},
-                           );
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () async {
-                           // Reject Logic
-                           await firestoreService.updateData(
-                             path: 'notifications/${notification.notificationId}',
-                             data: {'status': 'REJECTED'},
-                           );
-                        },
-                      ),
-                    ],
+              return AnimatedListItem(
+                index: index,
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: GlassCard(
+                    padding: const EdgeInsets.all(0),
+                    child: Row(
+                      children: [
+                        // Accent stripe
+                        Container(
+                          width: 4,
+                          height: 72,
+                          decoration: BoxDecoration(
+                            color: AppColors.accentAmber,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(20),
+                              bottomLeft: Radius.circular(20),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        // Icon
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: AppColors.accentAmber.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: Text(
+                              notification.fromUid.isNotEmpty ? notification.fromUid[0].toUpperCase() : '?',
+                              style: AppTextStyles.bodyLarge.copyWith(
+                                color: AppColors.accentAmber,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        // Content
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  notification.type.replaceAll('_', ' '),
+                                  style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  'Request pending',
+                                  style: AppTextStyles.bodySmall,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        // Actions
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () async {
+                                if (notification.type == 'APPROVAL_REQUEST') {
+                                  await firestoreService.updateData(
+                                    path: 'users/${notification.fromUid}',
+                                    data: {'approved': true, 'role': 'CLIENT', 'messId': notification.messId},
+                                  );
+                                }
+                                await firestoreService.updateData(
+                                  path: 'notifications/${notification.notificationId}',
+                                  data: {'status': 'ACCEPTED'},
+                                );
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentTeal.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.accentTeal.withOpacity(0.3)),
+                                ),
+                                child: Icon(Icons.check_rounded, color: AppColors.accentTeal, size: 18),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                await firestoreService.updateData(
+                                  path: 'notifications/${notification.notificationId}',
+                                  data: {'status': 'REJECTED'},
+                                );
+                              },
+                              child: Container(
+                                width: 36,
+                                height: 36,
+                                decoration: BoxDecoration(
+                                  color: AppColors.accentRose.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppColors.accentRose.withOpacity(0.3)),
+                                ),
+                                child: Icon(Icons.close_rounded, color: AppColors.accentRose, size: 18),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 14),
+                      ],
+                    ),
                   ),
                 ),
               );

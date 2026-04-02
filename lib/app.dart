@@ -9,7 +9,7 @@ class SmartMessApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Smart Mess App',
-      theme: AppTheme.lightTheme,
+      theme: AppTheme.darkTheme,
       initialRoute: AppRoutes.splash,
       onGenerateRoute: AppRoutes.generateRoute,
       debugShowCheckedModeBanner: false,

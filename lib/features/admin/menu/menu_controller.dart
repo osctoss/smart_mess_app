@@ -6,7 +6,7 @@ import '../../../core/services/firestore_service.dart';
 import '../../../models/menu_model.dart';
 import '../../../models/user_model.dart';
 
-class MenuController with ChangeNotifier {
+class MenuManagementController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
@@ -21,7 +21,7 @@ class MenuController with ChangeNotifier {
 
   String? _messId;
 
-  MenuController() {
+  MenuManagementController() {
     _initialize();
   }
 

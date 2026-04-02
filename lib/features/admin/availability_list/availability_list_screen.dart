@@ -1,8 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:intl/intl.dart';
 import 'availability_list_controller.dart';
 import '../../../core/constants/enums.dart';
+import '../../../core/constants/app_colors.dart';
+import '../../../core/constants/app_text_styles.dart';
+import '../../shared_widgets/glass_card.dart';
+import '../../shared_widgets/gradient_scaffold.dart';
+import '../../shared_widgets/animated_list_item.dart';
+import '../../shared_widgets/status_badge.dart';
+import '../../shared_widgets/shimmer_loading.dart';
 
 class AvailabilityListScreen extends StatelessWidget {
   const AvailabilityListScreen({super.key});
@@ -11,94 +19,213 @@ class AvailabilityListScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (_) => AvailabilityListController(),
-      child: Scaffold(
+      child: GradientScaffold(
         appBar: AppBar(title: const Text('Availability List')),
         body: Consumer<AvailabilityListController>(
           builder: (context, controller, _) {
             return Column(
               children: [
-                // Date Picker
+                // Date picker
                 Padding(
-                  padding: const EdgeInsets.all(8.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _navButton(
+                          icon: Icons.chevron_left_rounded,
+                          onTap: () => controller.onDateSelected(
+                            controller.selectedDate.subtract(const Duration(days: 1)),
+                          ),
+                        ),
+                        Text(
+                          DateFormat('EEE, MMM d').format(controller.selectedDate),
+                          style: AppTextStyles.heading4,
+                        ),
+                        _navButton(
+                          icon: Icons.chevron_right_rounded,
+                          onTap: () => controller.onDateSelected(
+                            controller.selectedDate.add(const Duration(days: 1)),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Meal chips
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                   child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.arrow_back),
-                        onPressed: () => controller.onDateSelected(controller.selectedDate.subtract(const Duration(days: 1))),
+                      _mealChip(
+                        label: 'Morning',
+                        icon: Icons.wb_sunny_rounded,
+                        isSelected: controller.selectedMeal == MealType.morning,
+                        onTap: () => controller.setMealType(MealType.morning),
                       ),
-                      Text(DateFormat('yyyy-MM-dd').format(controller.selectedDate), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      IconButton(
-                        icon: const Icon(Icons.arrow_forward),
-                        onPressed: () => controller.onDateSelected(controller.selectedDate.add(const Duration(days: 1))),
+                      const SizedBox(width: 12),
+                      _mealChip(
+                        label: 'Evening',
+                        icon: Icons.nightlight_round,
+                        isSelected: controller.selectedMeal == MealType.evening,
+                        onTap: () => controller.setMealType(MealType.evening),
                       ),
                     ],
                   ),
                 ),
-                // Meal Toggle
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Morning'),
-                      selected: controller.selectedMeal == MealType.morning,
-                      onSelected: (bool selected) {
-                        if (selected) controller.setMealType(MealType.morning);
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    ChoiceChip(
-                      label: const Text('Evening'),
-                      selected: controller.selectedMeal == MealType.evening,
-                      onSelected: (bool selected) {
-                        if (selected) controller.setMealType(MealType.evening);
-                      },
-                    ),
-                  ],
-                ),
-                const Divider(),
-                if (controller.isLoading) 
-                  const LinearProgressIndicator()
-                else 
+
+                const SizedBox(height: 8),
+
+                if (controller.isLoading)
+                  Expanded(child: ShimmerLoading.listPlaceholder())
+                else
                   Expanded(
                     child: controller.allMembers.isEmpty
-                        ? const Center(child: Text('No members found'))
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.people_outline_rounded, size: 56, color: AppColors.textMuted),
+                                const SizedBox(height: 12),
+                                Text('No members found', style: AppTextStyles.subtitle),
+                              ],
+                            ),
+                          )
                         : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: controller.allMembers.length,
                             itemBuilder: (context, index) {
                               final user = controller.allMembers[index];
                               final isAvailable = controller.isUserAvailable(user.uid);
-                              return ListTile(
-                                leading: Icon(
-                                  Icons.circle,
-                                  color: isAvailable ? Colors.green : Colors.red,
-                                  size: 16,
-                                ),
-                                title: Text(user.name),
-                                subtitle: Text(user.contactNumber),
-                                trailing: Text(
-                                  isAvailable ? 'Available' : 'Off',
-                                  style: TextStyle(
-                                    color: isAvailable ? Colors.green : Colors.red,
-                                    fontWeight: FontWeight.bold,
+                              return AnimatedListItem(
+                                index: index,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: GlassCard(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                    child: Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            gradient: isAvailable ? AppColors.tealGradient : AppColors.primaryGradient,
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Center(
+                                            child: Text(
+                                              user.name.isNotEmpty ? user.name[0].toUpperCase() : '?',
+                                              style: AppTextStyles.bodyLarge.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 14),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(user.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
+                                              Text(user.contactNumber, style: AppTextStyles.bodySmall),
+                                            ],
+                                          ),
+                                        ),
+                                        StatusBadge(
+                                          text: isAvailable ? 'Available' : 'Off',
+                                          variant: isAvailable ? BadgeVariant.success : BadgeVariant.danger,
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
                             },
                           ),
                   ),
+
+                // Summary footer
                 Container(
                   padding: const EdgeInsets.all(16),
-                  color: Colors.grey[200],
-                  child: Text(
-                    'Available: ${controller.availableCount} / Total: ${controller.allMembers.length}',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                    textAlign: TextAlign.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceDark,
+                    border: Border(top: BorderSide(color: AppColors.glassBorder)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.people_rounded, color: AppColors.accentTeal, size: 20),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Available: ',
+                        style: AppTextStyles.bodyMedium,
+                      ),
+                      Text(
+                        '${controller.availableCount}',
+                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        ' / ${controller.allMembers.length}',
+                        style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
                   ),
                 ),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _navButton({required IconData icon, required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          color: AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Icon(icon, color: AppColors.accentOrange, size: 22),
+      ),
+    );
+  }
+
+  Widget _mealChip({
+    required String label,
+    required IconData icon,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.accentOrange.withOpacity(0.15) : AppColors.surfaceLight,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? AppColors.accentOrange : AppColors.glassBorder,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: isSelected ? AppColors.accentOrange : AppColors.textSecondary),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: isSelected ? AppColors.accentOrange : AppColors.textSecondary,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ],
         ),
       ),
     );

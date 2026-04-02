@@ -43,52 +43,79 @@ class AppRoutes {
   static const String adminNotifications = '/adminNotifications';
   static const String attendance = '/attendance';
 
+  /// Custom fade + slide page transition
+  static PageRouteBuilder _buildRoute(Widget page, RouteSettings settings) {
+    return PageRouteBuilder(
+      settings: settings,
+      pageBuilder: (context, animation, secondaryAnimation) => page,
+      transitionDuration: const Duration(milliseconds: 300),
+      reverseTransitionDuration: const Duration(milliseconds: 250),
+      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+        final curvedAnimation = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curvedAnimation,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0.03, 0),
+              end: Offset.zero,
+            ).animate(curvedAnimation),
+            child: child,
+          ),
+        );
+      },
+    );
+  }
+
   static Route<dynamic> generateRoute(RouteSettings settings) {
     switch (settings.name) {
       case splash:
-        return MaterialPageRoute(builder: (_) => const SplashScreen());
+        return _buildRoute(const SplashScreen(), settings);
       case login:
-        return MaterialPageRoute(builder: (_) => const LoginScreen());
+        return _buildRoute(const LoginScreen(), settings);
       case signup:
-        return MaterialPageRoute(builder: (_) => const SignupScreen());
+        return _buildRoute(const SignupScreen(), settings);
       case createMess:
-        return MaterialPageRoute(builder: (_) => const CreateMessScreen());
+        return _buildRoute(const CreateMessScreen(), settings);
       case selectMess:
-        return MaterialPageRoute(builder: (_) => const SelectMessScreen());
+        return _buildRoute(const SelectMessScreen(), settings);
       case clientHome:
-        return MaterialPageRoute(builder: (_) => const ClientHomeScreen());
+        return _buildRoute(const ClientHomeScreen(), settings);
       case clientDashboard:
-        return MaterialPageRoute(builder: (_) => const ClientDashboard());
+        return _buildRoute(const ClientDashboard(), settings);
       case clientAvailability:
-        return MaterialPageRoute(builder: (_) => const AvailabilityScreen());
+        return _buildRoute(const AvailabilityScreen(), settings);
       case clientNotifications:
-        return MaterialPageRoute(builder: (_) => const ClientNotificationsScreen());
+        return _buildRoute(const ClientNotificationsScreen(), settings);
       case clientProfile:
-        return MaterialPageRoute(builder: (_) => const ProfileScreen());
+        return _buildRoute(const ProfileScreen(), settings);
       case changePassword:
-        return MaterialPageRoute(builder: (_) => ChangePasswordScreen());
+        return _buildRoute(const ChangePasswordScreen(), settings);
       case changePhone:
-        return MaterialPageRoute(builder: (_) => ChangePhoneScreen());
+        return _buildRoute(ChangePhoneScreen(), settings);
       case adminDashboard:
-        return MaterialPageRoute(builder: (_) => const AdminDashboard());
+        return _buildRoute(const AdminDashboard(), settings);
       case menuManagement:
-        return MaterialPageRoute(builder: (_) => const MenuScreen());
+        return _buildRoute(const MenuScreen(), settings);
       case availabilityList:
-        return MaterialPageRoute(builder: (_) => const AvailabilityListScreen());
+        return _buildRoute(const AvailabilityListScreen(), settings);
       case membersList:
-        return MaterialPageRoute(builder: (_) => const MembersScreen());
+        return _buildRoute(const MembersScreen(), settings);
       case clientDetail:
         final user = settings.arguments as UserModel?;
-        return MaterialPageRoute(builder: (_) => ClientDetailScreen(user: user));
+        return _buildRoute(ClientDetailScreen(user: user), settings);
       case adminNotifications:
-        return MaterialPageRoute(builder: (_) => const AdminNotificationsScreen());
+        return _buildRoute(const AdminNotificationsScreen(), settings);
       case attendance:
-        return MaterialPageRoute(builder: (_) => const AttendanceScreen());
+        return _buildRoute(const AttendanceScreen(), settings);
       default:
-        return MaterialPageRoute(
-          builder: (_) => Scaffold(
+        return _buildRoute(
+          Scaffold(
             body: Center(child: Text('No route defined for ${settings.name}')),
           ),
+          settings,
         );
     }
   }

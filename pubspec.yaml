@@ -42,6 +42,8 @@ dependencies:
   table_calendar: ^3.1.0 # Updated to compatible version
   uuid: ^4.2.0 # Added for generating IDs if needed locally
   shared_preferences: ^2.2.0 # Useful for storing local state like theme mode
+  google_fonts: ^6.1.0 # Modern typography (Poppins + Inter)
+  flutter_animate: ^4.5.0 # Declarative micro-animations
 
 dev_dependencies:
   flutter_test:
