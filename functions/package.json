@@ -1,0 +1,16 @@
+{
+  "name": "smart-mess-functions",
+  "private": true,
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "node -e \"console.log('No lint script configured')\"",
+    "deploy": "firebase deploy --only functions"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.1",
+    "firebase-functions": "^5.0.1"
+  }
+}

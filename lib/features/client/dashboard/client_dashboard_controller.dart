@@ -7,7 +7,6 @@ import '../../../models/user_model.dart';
 import '../../../models/mess_model.dart';
 import '../../../models/menu_model.dart';
 import '../../../models/diet_balance_model.dart';
-import '../../../core/services/diet_deduction_service.dart';
 
 class ClientDashboardController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
@@ -54,18 +53,6 @@ class ClientDashboardController with ChangeNotifier {
         ),
       ).first;
       _user = userDoc;
-
-      // Run Diet Deduction (Client-side trigger)
-      if (_user != null) {
-          try {
-            // Import DietDeductionService first
-             await DietDeductionService().performDailyDeduction(_user!);
-             // Re-fetch diet balance after deduction is handled by stream? 
-             // Stream will auto-update UI, but we perform it here.
-          } catch (e) {
-             debugPrint('Deduction error: $e');
-          }
-      }
 
       if (_user?.messId != null) {
          // 2. Fetch Mess Data

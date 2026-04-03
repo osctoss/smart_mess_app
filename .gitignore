@@ -71,6 +71,7 @@ android/key.properties
 .firebaserc
 firebase-debug.log
 firebase-debug.*.log
+functions/node_modules/
 
 # Generated files
 *.g.dart
