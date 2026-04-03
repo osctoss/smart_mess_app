@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../../../core/services/auth_service.dart';
-import '../../../core/services/firestore_service.dart';
+import '../../../core/services/device_id_service.dart';
 import '../../../core/utils/validators.dart';
 import '../../../core/constants/enums.dart';
 import '../../../core/routes/app_routes.dart';
@@ -10,7 +10,7 @@ import '../otp/otp_screen.dart';
 
 class SignupController with ChangeNotifier {
   final AuthService _authService = AuthService();
-  final FirestoreService _firestoreService = FirestoreService();
+  final DeviceIdService _deviceIdService = DeviceIdService();
 
   final TextEditingController nameController = TextEditingController();
   final TextEditingController contactController = TextEditingController();
@@ -57,6 +57,12 @@ class SignupController with ChangeNotifier {
     final phoneNumber = '+91$contact';
 
     try {
+      final deviceId = await _deviceIdService.getDeviceId();
+      await _authService.reserveOtpRequest(
+        deviceId: deviceId,
+        phoneNumber: phoneNumber,
+      );
+
       await _authService.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         onCodeSent: (verificationId, resendToken) async {
@@ -102,6 +108,10 @@ class SignupController with ChangeNotifier {
           }
         },
       );
+    } on FirebaseFunctionsException catch (e) {
+      _isLoading = false;
+      _errorMessage = e.message ?? 'OTP request failed.';
+      notifyListeners();
     } catch (e) {
       _isLoading = false;
       _errorMessage = 'Phone verification error: $e';
@@ -117,19 +127,6 @@ class SignupController with ChangeNotifier {
     String password,
   ) async {
     try {
-      // Check if user doc already exists
-      final existingDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(firebaseUser.uid)
-          .get();
-
-      if (existingDoc.exists) {
-        _errorMessage = 'An account with this phone number already exists. Please login instead.';
-        notifyListeners();
-        await _authService.signOut();
-        return;
-      }
-
       // Link email/password credential FIRST so user can login with password later.
       // This MUST succeed before we create the Firestore user document.
       final email = '$contact@smartmess.com';
@@ -143,18 +140,11 @@ class SignupController with ChangeNotifier {
         return;
       }
 
-      // Store user in Firestore (only after linking succeeded)
-      await _firestoreService.setData(
-        path: 'users/${firebaseUser.uid}',
-        data: {
-          'uid': firebaseUser.uid,
-          'name': name,
-          'contactNumber': contact,
-          'role': _selectedRole == UserRole.admin ? 'ADMIN' : 'CLIENT',
-          'messId': null,
-          'approved': false,
-          'createdAt': FieldValue.serverTimestamp(),
-        },
+      await _authService.createUserProfile(
+        uid: firebaseUser.uid,
+        name: name,
+        contactNumber: contact,
+        role: _selectedRole == UserRole.admin ? 'ADMIN' : 'CLIENT',
       );
 
       if (!context.mounted) return;
@@ -165,6 +155,13 @@ class SignupController with ChangeNotifier {
       } else {
         Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
       }
+    } on FirebaseFunctionsException catch (e) {
+      await _authService.signOut();
+      try {
+        await firebaseUser.delete();
+      } catch (_) {}
+      _errorMessage = e.message ?? 'Signup failed.';
+      notifyListeners();
     } catch (e) {
       _errorMessage = 'Failed to create account: $e';
       notifyListeners();

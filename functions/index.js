@@ -1,5 +1,6 @@
 const admin = require("firebase-admin");
 const {onSchedule} = require("firebase-functions/v2/scheduler");
+const {onCall, HttpsError} = require("firebase-functions/v2/https");
 const {logger} = require("firebase-functions");
 
 admin.initializeApp();
@@ -8,6 +9,8 @@ const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 const Timestamp = admin.firestore.Timestamp;
 const TIME_ZONE = "Asia/Kolkata";
+const SIGNUP_LIMIT_PER_HOUR = 20;
+const OTP_LIMIT_PER_HOUR = 2;
 
 exports.processDietDeductions = onSchedule(
   {
@@ -49,6 +52,99 @@ exports.processDietDeductions = onSchedule(
         });
       }
     }
+  },
+);
+
+exports.createUserProfile = onCall(
+  {
+    region: "asia-south1",
+  },
+  async (request) => {
+    if (!request.auth?.uid) {
+      throw new HttpsError("unauthenticated", "You must be signed in to complete signup.");
+    }
+
+    const {uid, name, contactNumber, role} = request.data || {};
+    if (!uid || !name || !contactNumber || !role) {
+      throw new HttpsError("invalid-argument", "Missing required signup data.");
+    }
+
+    if (uid !== request.auth.uid) {
+      throw new HttpsError("permission-denied", "You can only create your own profile.");
+    }
+
+    if (!["ADMIN", "CLIENT"].includes(role)) {
+      throw new HttpsError("invalid-argument", "Invalid user role.");
+    }
+
+    const userRef = db.collection("users").doc(uid);
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000));
+    const recentSignupQuery = db.collection("users").where("createdAt", ">=", oneHourAgo);
+
+    const [existingUserSnap, recentSignupCountSnap] = await Promise.all([
+      userRef.get(),
+      recentSignupQuery.count().get(),
+    ]);
+
+    if (existingUserSnap.exists) {
+      throw new HttpsError("already-exists", "An account with this phone number already exists. Please login instead.");
+    }
+
+    const recentSignupCount = recentSignupCountSnap.data().count || 0;
+    if (recentSignupCount >= SIGNUP_LIMIT_PER_HOUR) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "Signup limit reached. Please try again after some time.",
+      );
+    }
+
+    await userRef.set({
+      uid,
+      name,
+      contactNumber,
+      role,
+      messId: null,
+      approved: false,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    return {success: true};
+  },
+);
+
+exports.reserveOtpRequest = onCall(
+  {
+    region: "asia-south1",
+  },
+  async (request) => {
+    const {deviceId, phoneNumber} = request.data || {};
+    if (!deviceId || !phoneNumber) {
+      throw new HttpsError("invalid-argument", "Missing OTP request data.");
+    }
+
+    const oneHourAgo = Timestamp.fromDate(new Date(Date.now() - 60 * 60 * 1000));
+    const recentOtpQuery = db
+      .collection("otpRequests")
+      .where("deviceId", "==", deviceId)
+      .where("createdAt", ">=", oneHourAgo);
+
+    const recentOtpCountSnap = await recentOtpQuery.count().get();
+    const recentOtpCount = recentOtpCountSnap.data().count || 0;
+
+    if (recentOtpCount >= OTP_LIMIT_PER_HOUR) {
+      throw new HttpsError(
+        "resource-exhausted",
+        "OTP limit reached for this device. Try again after some time.",
+      );
+    }
+
+    await db.collection("otpRequests").add({
+      deviceId,
+      phoneNumber,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+
+    return {success: true};
   },
 );
 

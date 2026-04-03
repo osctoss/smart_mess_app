@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -62,6 +64,32 @@ class AuthService {
     }
     final credential = EmailAuthProvider.credential(email: email, password: password);
     await user.linkWithCredential(credential);
+  }
+
+  Future<void> createUserProfile({
+    required String uid,
+    required String name,
+    required String contactNumber,
+    required String role,
+  }) async {
+    final callable = _functions.httpsCallable('createUserProfile');
+    await callable.call({
+      'uid': uid,
+      'name': name,
+      'contactNumber': contactNumber,
+      'role': role,
+    });
+  }
+
+  Future<void> reserveOtpRequest({
+    required String deviceId,
+    required String phoneNumber,
+  }) async {
+    final callable = _functions.httpsCallable('reserveOtpRequest');
+    await callable.call({
+      'deviceId': deviceId,
+      'phoneNumber': phoneNumber,
+    });
   }
 
   // ── Email/Password Auth (for login) ──

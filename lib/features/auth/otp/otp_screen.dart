@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 import '../../../core/services/auth_service.dart';
+import '../../../core/services/device_id_service.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../shared_widgets/custom_button.dart';
@@ -28,6 +30,7 @@ class OTPScreen extends StatefulWidget {
 
 class _OTPScreenState extends State<OTPScreen> {
   final AuthService _authService = AuthService();
+  final DeviceIdService _deviceIdService = DeviceIdService();
   final List<TextEditingController> _digitControllers = List.generate(6, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(6, (_) => FocusNode());
 
@@ -91,30 +94,50 @@ class _OTPScreenState extends State<OTPScreen> {
       _errorMessage = null;
     });
 
-    await _authService.verifyPhoneNumber(
-      phoneNumber: '+91${widget.phoneNumber}',
-      onCodeSent: (verificationId, resendToken) {
-        if (!mounted) return;
-        setState(() {
-          _verificationId = verificationId;
-          _isLoading = false;
-        });
-        _startTimer();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP resent successfully!')),
-        );
-      },
-      onError: (errorMessage) {
-        if (!mounted) return;
-        setState(() {
-          _errorMessage = errorMessage;
-          _isLoading = false;
-        });
-      },
-      onAutoVerified: (credential) async {
-        await _signInWithCredential(credential);
-      },
-    );
+    try {
+      final deviceId = await _deviceIdService.getDeviceId();
+      await _authService.reserveOtpRequest(
+        deviceId: deviceId,
+        phoneNumber: '+91${widget.phoneNumber}',
+      );
+
+      await _authService.verifyPhoneNumber(
+        phoneNumber: '+91${widget.phoneNumber}',
+        onCodeSent: (verificationId, resendToken) async {
+          if (!mounted) return;
+          setState(() {
+            _verificationId = verificationId;
+            _isLoading = false;
+          });
+          _startTimer();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('OTP resent successfully!')),
+          );
+        },
+        onError: (errorMessage) {
+          if (!mounted) return;
+          setState(() {
+            _errorMessage = errorMessage;
+            _isLoading = false;
+          });
+        },
+        onAutoVerified: (credential) async {
+          await _signInWithCredential(credential);
+        },
+      );
+    } on FirebaseFunctionsException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = e.message ?? 'OTP request failed.';
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorMessage = 'Failed to resend OTP: $e';
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _verifyOTP() async {
