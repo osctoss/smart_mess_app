@@ -85,24 +85,36 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               // Animated icon with glow
-              Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppColors.primaryGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.accentOrange.withValues(alpha: 0.4),
-                      blurRadius: 40,
-                      spreadRadius: 5,
+              SizedBox(
+                width: 150,
+                height: 150,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 104,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF5F8BFF).withValues(alpha: 0.28),
+                            blurRadius: 34,
+                            spreadRadius: 8,
+                          ),
+                          BoxShadow(
+                            color: const Color(0xFF8FB0FF).withValues(alpha: 0.16),
+                            blurRadius: 56,
+                            spreadRadius: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                    Image.asset(
+                      'assets/icons/Mess_icon.png',
+                      fit: BoxFit.contain,
                     ),
                   ],
-                ),
-                child: const Icon(
-                  Icons.restaurant_menu_rounded,
-                  size: 56,
-                  color: Colors.white,
                 ),
               )
                   .animate()

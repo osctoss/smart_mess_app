@@ -6,6 +6,7 @@ import '../../../core/constants/enums.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../shared_widgets/glass_card.dart';
+import '../../shared_widgets/custom_button.dart';
 import '../../shared_widgets/gradient_scaffold.dart';
 import '../../shared_widgets/animated_list_item.dart';
 import '../../shared_widgets/shimmer_loading.dart';
@@ -77,6 +78,43 @@ class AttendanceScreen extends StatelessWidget {
 
                 const SizedBox(height: 8),
 
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: GlassCard(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    borderColor: controller.isAttendanceEditable
+                        ? AppColors.accentTeal.withValues(alpha: 0.25)
+                        : AppColors.glassBorder,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          controller.isAttendanceEditable
+                              ? Icons.edit_calendar_rounded
+                              : Icons.lock_clock_rounded,
+                          color: controller.isAttendanceEditable
+                              ? AppColors.accentTeal
+                              : AppColors.accentRose,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            controller.attendanceWindowMessage ?? '',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: controller.isAttendanceEditable
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
+
                 if (controller.isLoading)
                   Expanded(child: ShimmerLoading.listPlaceholder())
                 else
@@ -128,7 +166,20 @@ class AttendanceScreen extends StatelessWidget {
                                             ],
                                           ),
                                         ),
-                                        Icon(Icons.check_circle_rounded, color: AppColors.accentTeal, size: 22),
+                                        Checkbox(
+                                          value: controller.isMarkedPresent(user.uid),
+                                          onChanged: controller.isAttendanceEditable
+                                              ? (value) => controller.toggleAttendance(user.uid, value ?? false)
+                                              : null,
+                                          activeColor: AppColors.accentTeal,
+                                          checkColor: Colors.white,
+                                          side: BorderSide(
+                                            color: controller.isMarkedPresent(user.uid)
+                                                ? AppColors.accentTeal
+                                                : AppColors.textSecondary,
+                                            width: 1.8,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -138,27 +189,75 @@ class AttendanceScreen extends StatelessWidget {
                           ),
                   ),
 
-                // Summary footer
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceDark,
-                    border: Border(top: BorderSide(color: AppColors.glassBorder)),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.check_circle_rounded, color: AppColors.accentTeal, size: 20),
-                      const SizedBox(width: 8),
-                      Text('Total Present: ', style: AppTextStyles.bodyMedium),
-                      Text(
-                        '${controller.availableMembers.length}',
-                        style: AppTextStyles.bodyLarge.copyWith(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
               ],
+            );
+          },
+        ),
+        bottomNavigationBar: Consumer<AttendanceController>(
+          builder: (context, controller, _) {
+            return SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceDark,
+                      border: Border(top: BorderSide(color: AppColors.glassBorder)),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_rounded, color: AppColors.accentTeal, size: 20),
+                        const SizedBox(width: 8),
+                        Text('Total Present: ', style: AppTextStyles.bodyMedium),
+                        Text(
+                          '${controller.presentCount}',
+                          style: AppTextStyles.bodyLarge.copyWith(color: AppColors.accentTeal, fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          ' / ${controller.availableMembers.length}',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ],
+                    ),
+                  ),
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 180),
+                    opacity: controller.isAttendanceEditable
+                        ? (controller.hasUnsavedChanges || controller.isSaving ? 1 : 0.75)
+                        : 0.7,
+                    child: IgnorePointer(
+                      ignoring: (!controller.isAttendanceEditable || !controller.hasUnsavedChanges) &&
+                          !controller.isSaving,
+                      child: CustomButton(
+                        text: controller.isAttendanceEditable
+                            ? (controller.hasUnsavedChanges ? 'Save Attendance' : 'Attendance Saved')
+                            : 'Attendance Locked',
+                        icon: Icons.save_rounded,
+                        isLoading: controller.isSaving,
+                        onPressed: () async {
+                          final saved = await controller.saveAttendance();
+                          if (!context.mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                saved
+                                    ? 'Attendance saved successfully'
+                                    : controller.isAttendanceEditable
+                                        ? 'Could not save attendance. Please try again.'
+                                        : 'Attendance cannot be edited in this time window.',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),

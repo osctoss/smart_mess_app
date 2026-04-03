@@ -28,24 +28,36 @@ class LoginScreen extends StatelessWidget {
                   SizedBox(height: MediaQuery.of(context).size.height * 0.1),
 
                   // Logo
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: AppColors.primaryGradient,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.accentOrange.withValues(alpha: 0.3),
-                          blurRadius: 24,
-                          spreadRadius: 2,
+                  SizedBox(
+                    width: 110,
+                    height: 110,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Container(
+                          width: 76,
+                          height: 76,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF5F8BFF).withValues(alpha: 0.28),
+                                blurRadius: 28,
+                                spreadRadius: 6,
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF8FB0FF).withValues(alpha: 0.16),
+                                blurRadius: 44,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Image.asset(
+                          'assets/icons/Mess_icon.png',
+                          fit: BoxFit.contain,
                         ),
                       ],
-                    ),
-                    child: const Icon(
-                      Icons.restaurant_menu_rounded,
-                      size: 36,
-                      color: Colors.white,
                     ),
                   )
                       .animate()
