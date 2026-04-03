@@ -95,7 +95,6 @@ class ClientDetailScreen extends StatelessWidget {
           content: Text(isDeduction ? 'Diets Deducted' : 'Diets Added'),
         ),
       );
-      Navigator.pop(context);
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
