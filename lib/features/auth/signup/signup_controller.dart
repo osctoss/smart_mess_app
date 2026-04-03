@@ -76,6 +76,7 @@ class SignupController with ChangeNotifier {
             ),
           );
 
+          if (!context.mounted) return;
           if (result != null && result.user != null) {
             await _completeSignup(context, result.user!, name, contact, password);
           }

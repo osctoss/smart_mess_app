@@ -105,7 +105,20 @@ class MembersScreen extends StatelessWidget {
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => controller.removeMember(member.uid),
+                                        onTap: () async {
+                                          try {
+                                            final message = await controller.removeMember(member.uid);
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text(message)),
+                                            );
+                                          } catch (e) {
+                                            if (!context.mounted) return;
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              SnackBar(content: Text('Failed to remove member: $e')),
+                                            );
+                                          }
+                                        },
                                         child: Container(
                                           width: 36,
                                           height: 36,

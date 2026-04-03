@@ -59,6 +59,7 @@ class CreateMessController with ChangeNotifier {
       );
 
       // 3. Navigate to Dashboard
+      if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.adminDashboard, (route) => false);
       
     } catch (e) {

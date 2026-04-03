@@ -90,6 +90,7 @@ class SelectMessController with ChangeNotifier {
       );
 
       // 3. Navigate to Login or Wait Screen
+      if (!context.mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
       
     } catch (e) {

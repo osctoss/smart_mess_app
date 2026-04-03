@@ -17,6 +17,93 @@ class ClientDetailScreen extends StatelessWidget {
 
   const ClientDetailScreen({super.key, this.user});
 
+  Future<void> _updateDietBalance(
+    BuildContext context, {
+    required int amount,
+    required bool isDeduction,
+  }) async {
+    if (user == null) return;
+
+    if (amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Invalid Amount')),
+      );
+      return;
+    }
+
+    try {
+      final dietRef = FirebaseFirestore.instance
+          .collection('dietBalances')
+          .doc(user!.uid);
+
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final dietDoc = await transaction.get(dietRef);
+
+        if (dietDoc.exists) {
+          final data = dietDoc.data() ?? <String, dynamic>{};
+          final currentTotal = (data['totalDiets'] ?? 0) as int;
+          final currentRemaining = (data['remainingDiets'] ?? 0) as int;
+
+          if (isDeduction) {
+            if (currentRemaining < amount) {
+              throw Exception('Not enough diets to deduct');
+            }
+
+            transaction.update(dietRef, {
+              'remainingDiets': currentRemaining - amount,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
+          } else {
+            transaction.update(dietRef, {
+              'totalDiets': currentTotal + amount,
+              'remainingDiets': currentRemaining + amount,
+              'lastUpdated': FieldValue.serverTimestamp(),
+            });
+          }
+        } else {
+          if (isDeduction) {
+            throw Exception('No diets available to deduct');
+          }
+
+          transaction.set(dietRef, {
+            'uid': user!.uid,
+            'totalDiets': amount,
+            'remainingDiets': amount,
+            'lastUpdated': FieldValue.serverTimestamp(),
+          });
+        }
+      });
+
+      final adminUid = FirebaseAuth.instance.currentUser!.uid;
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(adminUid)
+          .get();
+      final messId = adminDoc.data()?['messId'] ?? '';
+
+      await NotificationService().sendNotification(
+        messId: messId,
+        type: NotificationType.dietAllocated,
+        fromUid: adminUid,
+        toUid: user!.uid,
+        message: isDeduction ? '$amount diets deducted' : '$amount diets added',
+      );
+
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(isDeduction ? 'Diets Deducted' : 'Diets Added'),
+        ),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final TextEditingController dietController = TextEditingController();
@@ -57,6 +144,62 @@ class ClientDetailScreen extends StatelessWidget {
 
             const SizedBox(height: 36),
 
+            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('dietBalances')
+                  .doc(user?.uid)
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data();
+                final totalDiets = (data?['totalDiets'] ?? 0) as int;
+                final remainingDiets = (data?['remainingDiets'] ?? 0) as int;
+
+                return GlassCard(
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              gradient: AppColors.blueGradient,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.pie_chart_rounded, color: Colors.white, size: 20),
+                          ),
+                          const SizedBox(width: 12),
+                          Text('Current Diet Balance', style: AppTextStyles.heading4),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _BalanceStat(
+                              label: 'Remaining',
+                              value: '$remainingDiets',
+                              valueColor: AppColors.accentTeal,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _BalanceStat(
+                              label: 'Total',
+                              value: '$totalDiets',
+                              valueColor: AppColors.accentBlue,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ).animate().fadeIn(delay: 350.ms, duration: 500.ms);
+              },
+            ),
+
+            const SizedBox(height: 16),
+
             // Diet allocation
             GlassCard(
               child: Column(
@@ -77,79 +220,49 @@ class ClientDetailScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
+                  CustomTextField(
+                    controller: dietController,
+                    label: 'Number of Diets',
+                    prefixIcon: Icons.add_circle_outline_rounded,
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 16),
                   Row(
                     children: [
                       Expanded(
-                        child: CustomTextField(
-                          controller: dietController,
-                          label: 'Number of Diets',
-                          prefixIcon: Icons.add_circle_outline_rounded,
-                          keyboardType: TextInputType.number,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      SizedBox(
-                        width: 100,
                         child: CustomButton(
                           text: 'Add',
                           icon: Icons.add_rounded,
                           fullWidth: true,
                           onPressed: () async {
                             final amount = int.tryParse(dietController.text);
-                            if (amount == null || amount <= 0) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Invalid Amount')),
-                              );
-                              return;
-                            }
-
-                            try {
-                              final dietRef = FirebaseFirestore.instance
-                                  .collection('dietBalances')
-                                  .doc(user!.uid);
-                              final dietDoc = await dietRef.get();
-
-                              if (dietDoc.exists) {
-                                await dietRef.update({
-                                  'totalDiets': FieldValue.increment(amount),
-                                  'remainingDiets': FieldValue.increment(amount),
-                                  'lastUpdated': FieldValue.serverTimestamp(),
-                                });
-                              } else {
-                                await dietRef.set({
-                                  'uid': user!.uid,
-                                  'totalDiets': amount,
-                                  'remainingDiets': amount,
-                                  'lastUpdated': FieldValue.serverTimestamp(),
-                                });
-                              }
-
-                              final adminUid = FirebaseAuth.instance.currentUser!.uid;
-                              final adminDoc = await FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(adminUid)
-                                  .get();
-                              final messId = adminDoc.data()?['messId'] ?? '';
-
-                              await NotificationService().sendNotification(
-                                messId: messId,
-                                type: NotificationType.dietAllocated,
-                                fromUid: adminUid,
-                                toUid: user!.uid,
-                                message: '$amount diets added',
-                              );
-
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Diets Added')),
-                              );
-                              Navigator.pop(context);
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Error: $e')),
-                              );
-                            }
+                            await _updateDietBalance(
+                              context,
+                              amount: amount ?? 0,
+                              isDeduction: false,
+                            );
+                          },
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: CustomButton(
+                          text: 'Deduct',
+                          icon: Icons.remove_rounded,
+                          fullWidth: true,
+                          gradient: LinearGradient(
+                            colors: [
+                              AppColors.accentRose.withValues(alpha: 0.95),
+                              AppColors.accentOrange.withValues(alpha: 0.95),
+                            ],
+                          ),
+                          onPressed: () async {
+                            final amount = int.tryParse(dietController.text);
+                            await _updateDietBalance(
+                              context,
+                              amount: amount ?? 0,
+                              isDeduction: true,
+                            );
                           },
                         ),
                       ),
@@ -160,6 +273,44 @@ class ClientDetailScreen extends StatelessWidget {
             ).animate().fadeIn(delay: 400.ms, duration: 600.ms).slideY(begin: 0.1, end: 0, delay: 400.ms, duration: 600.ms),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BalanceStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color valueColor;
+
+  const _BalanceStat({
+    required this.label,
+    required this.value,
+    required this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.glassBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.bodySmall),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTextStyles.heading3.copyWith(
+              color: valueColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }

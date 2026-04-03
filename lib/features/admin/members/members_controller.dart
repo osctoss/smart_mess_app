@@ -97,7 +97,7 @@ class MembersController with ChangeNotifier {
     );
   }
 
-  Future<void> removeMember(String uid) async {
+  Future<String> removeMember(String uid) async {
     try {
        // Use direct Firestore get() to safely handle missing diet doc
        final dietSnapshot = await FirebaseFirestore.instance
@@ -129,6 +129,7 @@ class MembersController with ChangeNotifier {
               await _firestoreService.deleteData(path: 'dietBalances/$uid');
             } catch (_) {}
           }
+          return 'Member removed successfully';
        } else {
           await _notificationService.sendNotification(
             messId: _messId!,
@@ -136,9 +137,11 @@ class MembersController with ChangeNotifier {
             fromUid: _auth.currentUser!.uid,
             toUid: uid,
           );
+          return 'Removal request sent';
        }
     } catch (e) {
        debugPrint('Error removing member: $e');
+       rethrow;
     }
   }
 
