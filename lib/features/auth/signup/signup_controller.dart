@@ -151,7 +151,7 @@ class SignupController with ChangeNotifier {
 
       // Navigate based on role
       if (_selectedRole == UserRole.admin) {
-        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.createMess, (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, AppRoutes.adminHome, (route) => false);
       } else {
         Navigator.pushNamedAndRemoveUntil(context, AppRoutes.login, (route) => false);
       }

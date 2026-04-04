@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/routes/app_routes.dart';
 
-
 class CreateMessController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -35,6 +34,19 @@ class CreateMessController with ChangeNotifier {
       final user = _auth.currentUser;
       if (user == null) throw Exception('User not logged in');
 
+      // Check maximum 3 messes
+      final createdMessesSnapshot = await FirebaseFirestore.instance
+          .collection('messes')
+          .where('createdBy', isEqualTo: user.uid)
+          .get();
+      
+      if (createdMessesSnapshot.docs.length >= 3) {
+        _errorMessage = 'Maximum of 3 messes allowed per admin';
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
+
       final messId = const Uuid().v4();
 
       // 1. Create Mess Document
@@ -58,9 +70,9 @@ class CreateMessController with ChangeNotifier {
         },
       );
 
-      // 3. Navigate to Dashboard
+      // 3. Navigate to Admin Home
       if (!context.mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.adminDashboard, (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, AppRoutes.adminHome, (route) => false);
       
     } catch (e) {
       _errorMessage = 'Failed to create mess: $e';

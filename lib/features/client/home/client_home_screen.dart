@@ -232,24 +232,36 @@ class ClientHomeScreen extends StatelessWidget {
                       Expanded(
                         child: Text(mess.messName, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
                       ),
-                      if (!hasJoinedMess)
-                        GestureDetector(
-                          onTap: () => controller.joinMess(context, mess),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                            decoration: BoxDecoration(
-                              gradient: AppColors.tealGradient,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              'Join',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
+                      GestureDetector(
+                        onTap: () {
+                          if (hasJoinedMess) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('You can only join one mess at a time.'),
+                                duration: Duration(seconds: 2),
                               ),
+                            );
+                          } else {
+                            controller.joinMess(context, mess);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            gradient: hasJoinedMess ? null : AppColors.tealGradient,
+                            color: hasJoinedMess ? AppColors.surfaceLight.withValues(alpha: 0.5) : null,
+                            borderRadius: BorderRadius.circular(12),
+                            border: hasJoinedMess ? Border.all(color: AppColors.surfaceLight) : null,
+                          ),
+                          child: Text(
+                            hasJoinedMess ? 'Locked' : 'Join',
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: hasJoinedMess ? AppColors.textMuted : Colors.white,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),

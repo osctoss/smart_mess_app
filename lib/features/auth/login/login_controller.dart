@@ -68,11 +68,7 @@ class LoginController with ChangeNotifier {
       if (!context.mounted) return;
 
       if (userModel.role == 'ADMIN') {
-        if (userModel.messId == null) {
-          Navigator.pushReplacementNamed(context, AppRoutes.createMess);
-        } else {
-          Navigator.pushReplacementNamed(context, AppRoutes.adminDashboard);
-        }
+        Navigator.pushReplacementNamed(context, AppRoutes.adminHome);
       } else {
         Navigator.pushReplacementNamed(context, AppRoutes.clientHome);
       }
