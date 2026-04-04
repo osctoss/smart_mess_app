@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:intl/intl.dart';
 import '../../../models/user_model.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../core/constants/enums.dart';
@@ -140,6 +141,18 @@ class ClientDetailScreen extends StatelessWidget {
             Text(user?.name ?? 'Name', style: AppTextStyles.heading2).animate().fadeIn(delay: 200.ms),
             const SizedBox(height: 4),
             Text(user?.contactNumber ?? 'Contact', style: AppTextStyles.subtitle).animate().fadeIn(delay: 300.ms),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 14, color: AppColors.textSecondary),
+                const SizedBox(width: 6),
+                Text(
+                  'Joined ${DateFormat('dd MMM yyyy').format(user?.createdAt ?? DateTime.now())}',
+                  style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ).animate().fadeIn(delay: 340.ms),
 
             const SizedBox(height: 36),
 

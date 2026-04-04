@@ -14,6 +14,22 @@ import '../../shared_widgets/shimmer_loading.dart';
 class AvailabilityListScreen extends StatelessWidget {
   const AvailabilityListScreen({super.key});
 
+  Future<void> _pickDate(
+    BuildContext context,
+    AvailabilityListController controller,
+  ) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: controller.selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+
+    if (pickedDate != null) {
+      controller.onDateSelected(pickedDate);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
@@ -28,6 +44,7 @@ class AvailabilityListScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: GlassCard(
+                    onTap: () => _pickDate(context, controller),
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,

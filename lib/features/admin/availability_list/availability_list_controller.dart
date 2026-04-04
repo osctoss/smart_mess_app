@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/constants/enums.dart';
+import '../../../models/mess_model.dart';
 import '../../../models/user_model.dart';
 import '../../../models/availability_model.dart';
 
@@ -29,6 +31,7 @@ class AvailabilityListController with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   String? _messId;
+  DateTime? _messCreatedAt;
 
   AvailabilityListController() {
     _initialize();
@@ -46,6 +49,22 @@ class AvailabilityListController with ChangeNotifier {
         ),
       ).first;
       _messId = userDoc.messId;
+
+      if (_messId != null) {
+        final messDoc = await _firestoreService.documentStream(
+          path: 'messes/$_messId',
+          builder: (data, id) => MessModel(
+            messId: id,
+            messName: data['messName'] ?? '',
+            createdBy: data['createdBy'] ?? '',
+            createdAt: data['createdAt'] != null
+                ? (data['createdAt'] as Timestamp).toDate()
+                : DateTime.now(),
+          ),
+        ).first;
+        _messCreatedAt = messDoc.createdAt;
+      }
+
       await _loadAvailability();
     }
   }
@@ -76,6 +95,18 @@ class AvailabilityListController with ChangeNotifier {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final selectedDay = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+      );
+      final messCreatedDay = _messCreatedAt == null
+          ? null
+          : DateTime(
+              _messCreatedAt!.year,
+              _messCreatedAt!.month,
+              _messCreatedAt!.day,
+            );
       
       // 1. Fetch ALL approved users for this mess (including admins filtered out later)
       final users = await _firestoreService.collectionStream(
@@ -87,7 +118,9 @@ class AvailabilityListController with ChangeNotifier {
           name: data['name'] ?? '',
           contactNumber: data['contactNumber'] ?? '',
           role: data['role'] ?? '',
-          createdAt: DateTime.now(),
+          createdAt: data['createdAt'] != null
+              ? (data['createdAt'] as Timestamp).toDate()
+              : DateTime.now(),
           messId: _messId,
           approved: true,
           permanentOff: data['permanentOff'] ?? false,
@@ -96,8 +129,23 @@ class AvailabilityListController with ChangeNotifier {
         ),
       ).first;
 
-      // Keep only CLIENTs
-      _allMembers = users.where((u) => u.role == 'CLIENT').toList();
+      // Keep only CLIENTs who had actually joined by the selected date,
+      // and never show members before the mess itself existed.
+      _allMembers = users.where((u) {
+        if (u.role != 'CLIENT') return false;
+
+        final userCreatedDay = DateTime(
+          u.createdAt.year,
+          u.createdAt.month,
+          u.createdAt.day,
+        );
+
+        if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
+          return false;
+        }
+
+        return !selectedDay.isBefore(userCreatedDay);
+      }).toList();
 
       // 2. Fetch availability documents for this date/meal
       final availabilityDocs = await _firestoreService.collectionStream(

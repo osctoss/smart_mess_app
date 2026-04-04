@@ -32,11 +32,13 @@ class AvailabilityScreen extends StatelessWidget {
                       lastDay: DateTime.now().add(const Duration(days: 30)),
                       focusedDay: controller.selectedDate,
                       selectedDayPredicate: (day) => isSameDay(controller.selectedDate, day),
+                      enabledDayPredicate: (day) => !controller.isBeyondEditableRange(day),
                       onDaySelected: (selectedDay, focusedDay) {
                         controller.onDateSelected(selectedDay);
                       },
                       calendarStyle: CalendarStyle(
                         defaultTextStyle: AppTextStyles.bodyMedium,
+                        disabledTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textMuted),
                         weekendTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
                         outsideTextStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
                         todayDecoration: BoxDecoration(

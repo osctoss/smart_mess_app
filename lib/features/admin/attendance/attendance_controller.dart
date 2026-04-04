@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../core/constants/enums.dart';
+import '../../../models/mess_model.dart';
 import '../../../models/user_model.dart';
 import '../../../models/availability_model.dart';
 import '../../../models/attendance_model.dart';
@@ -36,6 +38,7 @@ class AttendanceController with ChangeNotifier {
   String? get attendanceWindowMessage => _attendanceWindowMessage;
 
   String? _messId;
+  DateTime? _messCreatedAt;
 
   AttendanceController() {
     _initialize();
@@ -84,6 +87,24 @@ class AttendanceController with ChangeNotifier {
           )
           .first;
       _messId = userDoc.messId;
+
+      if (_messId != null) {
+        final messDoc = await _firestoreService
+            .documentStream(
+              path: 'messes/$_messId',
+              builder: (data, id) => MessModel(
+                messId: id,
+                messName: data['messName'] ?? '',
+                createdBy: data['createdBy'] ?? '',
+                createdAt: data['createdAt'] != null
+                    ? (data['createdAt'] as Timestamp).toDate()
+                    : DateTime.now(),
+              ),
+            )
+            .first;
+        _messCreatedAt = messDoc.createdAt;
+      }
+
       await _loadAttendance();
     }
   }
@@ -120,6 +141,18 @@ class AttendanceController with ChangeNotifier {
 
     try {
       final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      final selectedDay = DateTime(
+        _selectedDate.year,
+        _selectedDate.month,
+        _selectedDate.day,
+      );
+      final messCreatedDay = _messCreatedAt == null
+          ? null
+          : DateTime(
+              _messCreatedAt!.year,
+              _messCreatedAt!.month,
+              _messCreatedAt!.day,
+            );
       _computeAttendanceWindow();
 
       final users = await _firestoreService
@@ -133,7 +166,9 @@ class AttendanceController with ChangeNotifier {
               name: data['name'] ?? '',
               contactNumber: data['contactNumber'] ?? '',
               role: data['role'] ?? '',
-              createdAt: DateTime.now(),
+              createdAt: data['createdAt'] != null
+                  ? (data['createdAt'] as Timestamp).toDate()
+                  : DateTime.now(),
               messId: _messId,
               approved: true,
               permanentOff: data['permanentOff'] ?? false,
@@ -144,7 +179,21 @@ class AttendanceController with ChangeNotifier {
           )
           .first;
 
-      final clientUsers = users.where((u) => u.role == 'CLIENT').toList();
+      final clientUsers = users.where((u) {
+        if (u.role != 'CLIENT') return false;
+
+        final userCreatedDay = DateTime(
+          u.createdAt.year,
+          u.createdAt.month,
+          u.createdAt.day,
+        );
+
+        if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
+          return false;
+        }
+
+        return !selectedDay.isBefore(userCreatedDay);
+      }).toList();
 
       final availabilityDocs = await _firestoreService
           .collectionStream(

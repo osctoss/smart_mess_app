@@ -8,6 +8,7 @@ import '../../../models/availability_model.dart';
 class AvailabilityController with ChangeNotifier {
   final FirestoreService _firestoreService = FirestoreService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  static const int editableFutureDays = 7;
 
   final Map<String, bool> _savedAvailability = {};
   final Map<String, bool> _draftAvailability = {};
@@ -87,6 +88,17 @@ class AvailabilityController with ChangeNotifier {
     _loadAvailability(date);
   }
 
+  DateTime get lastEditableDate {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return today.add(const Duration(days: editableFutureDays));
+  }
+
+  bool isBeyondEditableRange(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    return normalized.isAfter(lastEditableDate);
+  }
+
   String _availabilityDocId(String uid, String dateStr, String meal) {
     return '${uid}_${dateStr}_$meal';
   }
@@ -111,6 +123,9 @@ class AvailabilityController with ChangeNotifier {
       final selectedDay = DateTime(date.year, date.month, date.day);
 
       if (selectedDay.isBefore(today)) {
+        _isLockedMorning = true;
+        _isLockedEvening = true;
+      } else if (isBeyondEditableRange(selectedDay)) {
         _isLockedMorning = true;
         _isLockedEvening = true;
       } else if (selectedDay.isAfter(today)) {

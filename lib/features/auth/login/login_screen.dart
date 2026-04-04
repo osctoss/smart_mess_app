@@ -67,7 +67,7 @@ class LoginScreen extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   Text(
-                    AppStrings.appName,
+                    'Smart Mess',
                     style: AppTextStyles.heading1,
                     textAlign: TextAlign.center,
                   ).animate().fadeIn(delay: 200.ms, duration: 500.ms),
