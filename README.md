@@ -2,7 +2,7 @@
 
 A **multi-tenant mess (dining hall) management system** built with **Flutter** and **Firebase**. The app streamlines daily operations for both mess administrators and members — from menu planning and attendance tracking to availability management, diet balance monitoring, and member approvals.
 
-> **Platform:** Flutter (Dart) + Firebase (Auth, Cloud Firestore)
+> **Platform:** Flutter (Dart) + Firebase (Auth, Cloud Firestore, Cloud Functions)
 
 ---
 
@@ -13,23 +13,25 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 - Role-based access control — **Admin** & **Client**
 - Auto-login via splash screen with role-based routing
 - New clients can skip mess selection during signup and join later
+- Server-side signup & OTP rate-limiting via **Cloud Functions**
 
 ### 👨‍💼 Admin Panel
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| **Dashboard** | Quick Actions | Access to menu, availability, members & notifications |
+| **Dashboard** | Quick Actions | Access to menu, availability, members, attendance & notifications |
 | **Menu Management** | Daily Menus | Set/update morning & evening meal menus |
 | **Availability List** | Meal Tracking | View available clients for each meal; generate attendance records |
 | **Members Panel** | Member Mgmt | View all members, approve/remove, manage diet balances |
 | **Client Detail** | Diet Allocation | Allocate diets to individual members (sends notification) |
 | **Notifications** | Request Handling | Process approval & delete requests |
+| **Attendance** | Record Keeping | Record & view meal attendance logs |
 
 ### 👤 Client Panel
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| **Home Hub** *(NEW)* | Central Landing | Shows joined mess, available messes to join, profile & notifications |
+| **Home Hub** | Central Landing | Shows joined mess, available messes to join, profile & notifications |
 | **Mess Dashboard** | Mess View | Diet counter, today's menu, availability management |
 | **Availability** | Meal Toggles | Toggle ON/OFF for meals (past 30 days view, next 7 days editable) |
 | **Notifications** | Activity Feed | Diet allocation alerts, removal requests (accept/reject), status updates |
@@ -42,6 +44,97 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 
 ---
 
+## 🎨 Design System — "Midnight Feast" Theme
+
+The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring:
+
+### Color Palette
+| Token | Hex | Usage |
+|-------|-----|-------|
+| Scaffold Dark | `#0F0F1A` | Primary background |
+| Surface Dark | `#1A1A2E` | Card / panel backgrounds |
+| Surface Light | `#252540` | Input fields / elevated surfaces |
+| Accent Orange | `#FF6B35` | Primary actions, buttons, CTA |
+| Accent Teal | `#00D9A6` | Success states, secondary actions |
+| Accent Rose | `#FF4D6D` | Errors, danger states |
+| Accent Amber | `#FFB347` | Warnings |
+| Accent Blue | `#4DA8FF` | Informational states |
+
+### Design Principles
+- **Glassmorphism** — Frosted-glass cards with `BackdropFilter` blur, translucent backgrounds, and subtle borders
+- **Gradient Accents** — Multi-color gradient buttons and icon containers (Orange→Rose, Teal→Cyan, Blue→Violet, Amber→Orange)
+- **Micro-Animations** — Staggered list entrance animations, press-scale feedback on cards, shimmer loading placeholders, and smooth page transitions (fade + slide)
+- **Modern Typography** — `Poppins` for headings, `Inter` for body text (via Google Fonts)
+- **Consistent Spacing** — 20px card padding, 16px border radius on inputs, 20px border radius on cards
+
+### Shared Widget Library
+
+| Widget | Description |
+|--------|-------------|
+| `GlassCard` | Frosted-glass container with backdrop blur, press-scale animation, and configurable border/background |
+| `GradientScaffold` | Full-screen scaffold wrapped in the `scaffoldGradient` for consistent backgrounds |
+| `AnimatedListItem` | Staggered fade-in + slide-up entrance animation for list items |
+| `ShimmerLoading` | Pulsing shimmer placeholder during data loading |
+| `StatusBadge` | Colored pill badge with icon for status indicators (success/warning/danger/info) |
+| `CustomButton` | Gradient button with loading state, icon support, and glow shadow |
+| `CustomTextField` | Themed text input with icon prefix, validation, and focus animations |
+
+---
+
+## 📸 App Screenshots
+
+### 🔑 General (Auth & Profile)
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/splash.jpg" width="200"/><br/><b>Splash Screen</b></td>
+    <td align="center"><img src="assets/UI_visuals/login.jpg" width="200"/><br/><b>Login</b></td>
+    <td align="center"><img src="assets/UI_visuals/sign_up.jpg" width="200"/><br/><b>Sign Up</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/profile.jpg" width="200"/><br/><b>Profile</b></td>
+    <td align="center"><img src="assets/UI_visuals/update_password.jpg" width="200"/><br/><b>Update Password</b></td>
+    <td align="center"><img src="assets/UI_visuals/update_phone.jpg" width="200"/><br/><b>Update Phone</b></td>
+  </tr>
+</table>
+
+### 👨‍💼 Admin Panel
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/Admin_dashboard.jpg" width="200"/><br/><b>Dashboard</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_menu_management.jpg" width="200"/><br/><b>Menu Management</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_members.jpg" width="200"/><br/><b>Members</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/Admin_diet_allocation.jpg" width="200"/><br/><b>Diet Allocation</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_notification.jpg" width="200"/><br/><b>Notifications</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_availability_info.jpg" width="200"/><br/><b>Availability List</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/Admin_availibilty_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_attendance_info.jpg" width="200"/><br/><b>Attendance</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_attendance_info_2.jpg" width="200"/><br/><b>Attendance Records</b></td>
+  </tr>
+</table>
+
+### 👤 Client Panel
+
+<table>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/Client_home.jpg" width="200"/><br/><b>Home Hub</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_dashboard.jpg" width="200"/><br/><b>Mess Dashboard</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_notification.jpg" width="200"/><br/><b>Notifications</b></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="assets/UI_visuals/Client_availability_info.jpg" width="200"/><br/><b>Availability Calendar</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_availibility_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
+    <td></td>
+  </tr>
+</table>
+
+---
+
 ## 🏗️ Project Structure
 
 ```
@@ -51,30 +144,49 @@ smart_mess_app/
 ├── ios/                              # iOS platform files
 ├── web/ | macos/ | windows/ | linux/ # Other platform targets
 │
+├── assets/
+│   ├── icons/
+│   │   └── Mess_icon.png            # App icon asset
+│   └── UI_visuals/                  # App screenshots for README
+│
+├── functions/
+│   └── index.js                     # Firebase Cloud Functions
+│       ├── processDietDeductions    #   Scheduled diet deduction (every 30 min)
+│       ├── createUserProfile        #   Server-side signup with rate limiting
+│       └── reserveOtpRequest        #   OTP rate limiting per device
+│
+├── firestore.rules                  # Firestore security rules
+├── firestore.indexes.json           # Composite index definitions
+├── firebase.json                    # Firebase project configuration
+│
 ├── lib/
 │   ├── main.dart                     # App entry point (Firebase init)
-│   ├── app.dart                      # MaterialApp configuration
+│   ├── app.dart                      # MaterialApp configuration (dark theme)
 │   │
 │   ├── core/
 │   │   ├── constants/
-│   │   │   ├── app_colors.dart       # Color palette
+│   │   │   ├── app_colors.dart       # "Midnight Feast" color palette + gradients
+│   │   │   ├── app_decorations.dart  # Glass, gradient & accent box decorations
+│   │   │   ├── app_text_styles.dart  # Typography tokens (Poppins + Inter)
 │   │   │   ├── app_strings.dart      # Static strings
 │   │   │   └── enums.dart            # UserRole, MealType, NotificationType, etc.
 │   │   │
 │   │   ├── theme/
-│   │   │   └── app_theme.dart        # Light theme definition
+│   │   │   └── app_theme.dart        # Full Material 3 dark theme definition
 │   │   │
 │   │   ├── utils/
-│   │   │   └── validators.dart       # Input validation
+│   │   │   ├── validators.dart       # Input validation
+│   │   │   └── date_utils.dart       # Date formatting & comparison helpers
 │   │   │
 │   │   ├── services/
 │   │   │   ├── auth_service.dart          # Phone auth + OTP + password linking
 │   │   │   ├── firestore_service.dart     # Firestore CRUD + streams
 │   │   │   ├── notification_service.dart  # Create notifications in Firestore
-│   │   │   └── diet_deduction_service.dart # Daily diet deduction logic
+│   │   │   ├── diet_deduction_service.dart # Client-side diet deduction logic
+│   │   │   └── device_id_service.dart     # Persistent device ID for rate limiting
 │   │   │
 │   │   └── routes/
-│   │       └── app_routes.dart        # Route constants + route generator
+│   │       └── app_routes.dart        # Route constants + animated route generator
 │   │
 │   ├── models/
 │   │   ├── user_model.dart            # User profile + role + mess info
@@ -98,7 +210,7 @@ smart_mess_app/
 │   └── features/
 │       ├── auth/
 │       │   ├── splash/               # Splash → auto-route by role
-│       │   ├── login/                # Phone login
+│       │   ├── login/                # Phone login (controller + screen)
 │       │   ├── signup/               # Registration + OTP
 │       │   ├── otp/                  # OTP verification screen
 │       │   ├── create_mess/          # Admin: create new mess
@@ -107,21 +219,26 @@ smart_mess_app/
 │       ├── client/
 │       │   ├── home/                 # ★ Home Hub — central landing page
 │       │   ├── dashboard/            # Mess-specific: diet counter, menu, status
-│       │   ├── availability/         # Meal availability toggles
+│       │   ├── availability/         # Meal availability toggles + calendar
 │       │   ├── notifications/        # Notification feed with actions
-│       │   └── profile/              # Profile, change password/phone
+│       │   └── profile/              # Profile, change password, change phone
 │       │
 │       ├── admin/
-│       │   ├── dashboard/            # Admin home with quick actions
-│       │   ├── menu/                 # Set daily menus
-│       │   ├── availability_list/    # View available members
+│       │   ├── dashboard/            # Admin home with quick action cards
+│       │   ├── menu/                 # Set daily menus (controller + screen)
+│       │   ├── availability_list/    # View available members per meal
 │       │   ├── attendance/           # Record & view attendance
 │       │   ├── members/              # Member list + client detail + diet allocation
 │       │   └── notifications/        # Process approval/delete requests
 │       │
 │       └── shared_widgets/
-│           ├── custom_button.dart
-│           └── custom_text_field.dart
+│           ├── glass_card.dart        # Glassmorphism card with blur + press feedback
+│           ├── gradient_scaffold.dart # Gradient-wrapped scaffold
+│           ├── animated_list_item.dart # Staggered list entrance animation
+│           ├── shimmer_loading.dart   # Shimmer loading placeholder
+│           ├── status_badge.dart      # Colored status pill badge
+│           ├── custom_button.dart     # Gradient button with loading state
+│           └── custom_text_field.dart # Themed input with validation
 │
 ├── pubspec.yaml                      # Dependencies
 └── README.md
@@ -133,13 +250,46 @@ smart_mess_app/
 
 | Layer | Technology |
 |-------|------------|
-| **Framework** | Flutter (Dart SDK ^3.10.8) |
-| **Backend** | Firebase (Auth + Cloud Firestore) |
+| **Framework** | Flutter (Dart SDK ^3.10.8, Material 3) |
+| **Backend** | Firebase (Auth + Cloud Firestore + Cloud Functions v2) |
 | **Auth** | Firebase Phone Authentication (OTP) |
 | **State Management** | Provider |
+| **Serverless** | Firebase Cloud Functions (Node.js) — diet deduction, signup & OTP rate-limiting |
+| **Typography** | Google Fonts (Poppins + Inter) |
+| **Animations** | flutter_animate (shimmer, staggered lists, micro-interactions) |
 | **Calendar** | table_calendar |
 | **Local Storage** | shared_preferences |
-| **Utilities** | intl (date formatting), uuid (ID generation) |
+| **Utilities** | intl (date formatting), uuid (device ID generation) |
+
+---
+
+## ☁️ Cloud Functions
+
+The `functions/` directory contains **Firebase Cloud Functions v2** deployed to `asia-south1`:
+
+| Function | Trigger | Description |
+|----------|---------|-------------|
+| `processDietDeductions` | Scheduled (every 30 min) | Processes meal-time diet deductions for all approved clients. Uses Firestore transactions and idempotent deduction markers (`dietDeductionRuns`) to prevent double-processing. |
+| `createUserProfile` | Callable (onCall) | Server-side signup — validates auth, checks for duplicate accounts, enforces hourly signup rate limit (20/hour), and creates the user document. |
+| `reserveOtpRequest` | Callable (onCall) | OTP rate limiting — tracks OTP requests per device ID (2/hour max) to prevent abuse. |
+
+### Deduction Marker Collection: `dietDeductionRuns/{uid_date_meal}`
+| Field | Type | Description |
+|-------|------|-------------|
+| `uid` | string | User reference |
+| `messId` | string | Mess reference |
+| `date` | string | `YYYY-MM-DD` |
+| `meal` | string | `MORNING` \| `EVENING` |
+| `deducted` | boolean | Whether a diet was actually deducted |
+| `skippedReason` | string (optional) | Why deduction was skipped (e.g. `user_off`, `availability_off`, `no_remaining_diets`) |
+| `processedAt` | timestamp | Processing time |
+
+### OTP Tracking Collection: `otpRequests/{autoId}`
+| Field | Type | Description |
+|-------|------|-------------|
+| `deviceId` | string | UUID generated per device |
+| `phoneNumber` | string | Requesting phone number |
+| `createdAt` | timestamp | Request time |
 
 ---
 
@@ -221,7 +371,7 @@ All data is scoped by `messId` to ensure multi-tenant isolation.
 | `notifications` | `toUid` (Asc) + `createdAt` (Desc) | Client notifications query |
 | `notifications` | `toUid` (Asc) + `status` (Asc) + `createdAt` (Desc) | Admin notifications query |
 
-> Create these indexes via the Firebase Console or by clicking the link in the debug console error.
+> Create these indexes via the Firebase Console or by clicking the link in the debug console error. Index definitions are also available in `firestore.indexes.json`.
 
 ---
 
@@ -301,6 +451,8 @@ For each meal, a diet is deducted if **all** conditions are met:
 - `availability.status != "OFF"`
 - `remainingDiets > 0`
 
+> ⚡ Deductions are processed **server-side** via the `processDietDeductions` Cloud Function (runs every 30 minutes). Each deduction is tracked with an idempotent marker document in `dietDeductionRuns` to guarantee exactly-once processing.
+
 ### ⏰ Time Restrictions
 | Meal | Cutoff | After Cutoff |
 |------|--------|--------------|
@@ -314,7 +466,8 @@ For each meal, a diet is deducted if **all** conditions are met:
 ### Prerequisites
 - [Flutter SDK](https://docs.flutter.dev/get-started/install) (>= 3.10.8)
 - [Firebase CLI](https://firebase.google.com/docs/cli)
-- A Firebase project with **Phone Auth** & **Cloud Firestore** enabled
+- [Node.js](https://nodejs.org/) (>= 18, for Cloud Functions)
+- A Firebase project with **Phone Auth**, **Cloud Firestore**, and **Cloud Functions** enabled
 
 ### Setup
 
@@ -334,14 +487,29 @@ For each meal, a diet is deducted if **all** conditions are met:
    - Place `google-services.json` in `android/app/`
    - Place `GoogleService-Info.plist` in `ios/Runner/`
 
-3. **Install dependencies**
+3. **Install Flutter dependencies**
    ```bash
    flutter pub get
    ```
 
-4. **Create Firestore composite indexes** (see [Indexes Required](#-firestore-composite-indexes-required) section)
+4. **Install & deploy Cloud Functions**
+   ```bash
+   cd functions
+   npm install
+   firebase deploy --only functions
+   ```
 
-5. **Run the app**
+5. **Create Firestore composite indexes** (see [Indexes Required](#-firestore-composite-indexes-required) section)
+   ```bash
+   firebase deploy --only firestore:indexes
+   ```
+
+6. **Deploy Firestore security rules**
+   ```bash
+   firebase deploy --only firestore:rules
+   ```
+
+7. **Run the app**
    ```bash
    flutter run
    ```
@@ -353,8 +521,9 @@ For each meal, a diet is deducted if **all** conditions are met:
 ### Firestore Rules
 - All reads/writes are filtered by `messId`
 - Clients cannot access data from other messes
-- **Only Admin** can modify: menus, dietBalances, approvals
+- **Only Admin** can modify: menus, dietBalances, approvals, attendance
 - **Only Client** can modify: their own availability & profile
+- Notifications are scoped to sender (`fromUid`) and receiver (`toUid`)
 
 ### Gitignored Sensitive Files
 | File | Reason |
@@ -379,6 +548,8 @@ For each meal, a diet is deducted if **all** conditions are met:
 - ✅ Time-restricted availability edits enforced
 - ✅ Soft-delete on member removal — clients can rejoin after being removed
 - ✅ Real-time notifications for diet allocation, removal, and approvals
+- ✅ Idempotent diet deductions — no double-processing via Cloud Functions
+- ✅ Server-side signup & OTP rate-limiting to prevent abuse
 
 ---
 
