@@ -45,6 +45,7 @@ dependencies:
   shared_preferences: ^2.2.0 # Useful for storing local state like theme mode
   google_fonts: ^6.1.0 # Modern typography (Poppins + Inter)
   flutter_animate: ^4.5.0 # Declarative micro-animations
+  firebase_app_check: ^0.3.2+10
 
 dev_dependencies:
   flutter_test:
