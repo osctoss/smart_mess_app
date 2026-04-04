@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -20,29 +21,48 @@ class MenuManagementController with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   String? _messId;
+  StreamSubscription? _userSub;
+  StreamSubscription? _menuSub;
 
   MenuManagementController() {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    _menuSub?.cancel();
+    morningController.dispose();
+    eveningController.dispose();
+    super.dispose();
+  }
+
+  void _initialize() {
     _isLoading = true;
     notifyListeners();
     try {
       final user = _auth.currentUser;
       if (user != null) {
-        final userDoc = await _firestoreService.documentStream(
+        _userSub?.cancel();
+        _userSub = _firestoreService.documentStream(
           path: 'users/${user.uid}',
           builder: (data, id) => UserModel(
             uid: id,
             name: '', contactNumber: '', role: '', createdAt: DateTime.now(),
             messId: data['messId'],
           ),
-        ).first;
-        _messId = userDoc.messId;
-        await _loadMenu(_selectedDate);
+        ).listen((userDoc) {
+          _messId = userDoc.messId;
+          _loadMenu(_selectedDate);
+        }, onError: (e) {
+          _isLoading = false;
+          notifyListeners();
+        });
+      } else {
+        _isLoading = false;
+        notifyListeners();
       }
-    } finally {
+    } catch (e) {
       _isLoading = false;
       notifyListeners();
     }
@@ -53,7 +73,7 @@ class MenuManagementController with ChangeNotifier {
     _loadMenu(date);
   }
 
-  Future<void> _loadMenu(DateTime date) async {
+  void _loadMenu(DateTime date) {
     if (_messId == null) return;
     
     _isLoading = true;
@@ -62,28 +82,33 @@ class MenuManagementController with ChangeNotifier {
     final dateStr = DateFormat('yyyy-MM-dd').format(date);
     final menuId = '${_messId}_$dateStr';
 
-    try {
-      final menu = await _firestoreService.documentStream(
-        path: 'menus/$menuId',
-        builder: (data, id) => MenuModel(
-          messId: data['messId'] ?? '',
-          date: data['date'] ?? '',
-          morningMenu: data['morningMenu'] ?? '',
-          eveningMenu: data['eveningMenu'] ?? '',
-          updatedBy: '',
-        ),
-      ).first;
-
-      morningController.text = menu.morningMenu;
-      eveningController.text = menu.eveningMenu;
-    } catch (e) {
+    _menuSub?.cancel();
+    _menuSub = _firestoreService.documentStream(
+      path: 'menus/$menuId',
+      builder: (data, id) => MenuModel(
+        messId: data['messId'] ?? '',
+        date: data['date'] ?? '',
+        morningMenu: data['morningMenu'] ?? '',
+        eveningMenu: data['eveningMenu'] ?? '',
+        updatedBy: '',
+      ),
+    ).listen((menu) {
+      // Only update if not actively typing or just initialize
+      if (morningController.text != menu.morningMenu) {
+         morningController.text = menu.morningMenu;
+      }
+      if (eveningController.text != menu.eveningMenu) {
+         eveningController.text = menu.eveningMenu;
+      }
+      _isLoading = false;
+      notifyListeners();
+    }, onError: (e) {
       // Menu not found for this date
       morningController.text = '';
       eveningController.text = '';
-    } finally {
       _isLoading = false;
       notifyListeners();
-    }
+    });
   }
 
   Future<void> saveMenu(BuildContext context) async {

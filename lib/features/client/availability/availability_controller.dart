@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
@@ -43,11 +44,23 @@ class AvailabilityController with ChangeNotifier {
 
   String? _messId;
 
+  StreamSubscription? _userSub;
+  StreamSubscription? _morningSub;
+  StreamSubscription? _eveningSub;
+
   AvailabilityController() {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    _morningSub?.cancel();
+    _eveningSub?.cancel();
+    super.dispose();
+  }
+
+  void _initialize() {
     _isLoading = true;
     notifyListeners();
 
@@ -59,7 +72,8 @@ class AvailabilityController with ChangeNotifier {
     }
 
     try {
-      final userDoc = await _firestoreService
+      _userSub?.cancel();
+      _userSub = _firestoreService
           .documentStream(
             path: 'users/${user.uid}',
             builder: (data, id) => UserModel(
@@ -72,12 +86,15 @@ class AvailabilityController with ChangeNotifier {
               permanentOff: data['permanentOff'] ?? false,
             ),
           )
-          .first;
-
-      _messId = userDoc.messId;
-      _savedPermanentOff = userDoc.permanentOff;
-      await _loadAvailability(_selectedDate);
-    } finally {
+          .listen((userDoc) {
+        _messId = userDoc.messId;
+        _savedPermanentOff = userDoc.permanentOff;
+        _loadAvailability(_selectedDate);
+      }, onError: (_) {
+        _isLoading = false;
+        notifyListeners();
+      });
+    } catch (e) {
       _isLoading = false;
       notifyListeners();
     }
@@ -113,7 +130,7 @@ class AvailabilityController with ChangeNotifier {
     return _draftAvailability[key] ?? _savedAvailability[key] ?? true;
   }
 
-  Future<void> _loadAvailability(DateTime date) async {
+  void _loadAvailability(DateTime date) {
     _isLoading = true;
     notifyListeners();
 
@@ -138,45 +155,53 @@ class AvailabilityController with ChangeNotifier {
 
       final user = _auth.currentUser;
       if (_messId == null || user == null) {
+        _isLoading = false;
+        notifyListeners();
         return;
       }
 
       final dateStr = DateFormat('yyyy-MM-dd').format(date);
-      await _loadMealAvailability(user.uid, dateStr, 'MORNING');
-      await _loadMealAvailability(user.uid, dateStr, 'EVENING');
+      
+      _morningSub?.cancel();
+      _morningSub = _listenMealAvailability(user.uid, dateStr, 'MORNING');
+
+      _eveningSub?.cancel();
+      _eveningSub = _listenMealAvailability(user.uid, dateStr, 'EVENING');
     } catch (e) {
       debugPrint('Error loading availability: $e');
-    } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  Future<void> _loadMealAvailability(
+  StreamSubscription<AvailabilityModel> _listenMealAvailability(
     String uid,
     String dateStr,
     String meal,
-  ) async {
+  ) {
     final docId = _availabilityDocId(uid, dateStr, meal);
     final key = '${dateStr}_$meal';
 
-    try {
-      final doc = await _firestoreService
-          .documentStream(
-            path: 'availability/$docId',
-            builder: (data, id) => AvailabilityModel(
-              uid: data['uid'] ?? '',
-              messId: data['messId'] ?? '',
-              date: data['date'] ?? '',
-              meal: data['meal'] ?? '',
-              status: data['status'] ?? 'ON',
-            ),
-          )
-          .first;
+    return _firestoreService
+        .documentStream(
+          path: 'availability/$docId',
+          builder: (data, id) => AvailabilityModel(
+            uid: data['uid'] ?? '',
+            messId: data['messId'] ?? '',
+            date: data['date'] ?? '',
+            meal: data['meal'] ?? '',
+            status: data['status'] ?? 'ON',
+          ),
+        )
+        .listen((doc) {
       _savedAvailability[key] = doc.status != 'OFF';
-    } catch (_) {
+      _isLoading = false;
+      notifyListeners();
+    }, onError: (_) {
       _savedAvailability[key] = true;
-    }
+      _isLoading = false;
+      notifyListeners();
+    });
   }
 
   void togglePermanentOff(bool value) {

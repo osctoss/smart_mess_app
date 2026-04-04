@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -40,13 +41,33 @@ class AttendanceController with ChangeNotifier {
   String? _messId;
   DateTime? _messCreatedAt;
 
+  StreamSubscription? _userSub;
+  StreamSubscription? _messSub;
+  StreamSubscription? _usersSub;
+  StreamSubscription? _availSub;
+  StreamSubscription? _recordsSub;
+
+  List<UserModel> _rawUsers = [];
+  List<AvailabilityModel> _rawAvails = [];
+  List<AttendanceRecord> _rawRecords = [];
+
   AttendanceController() {
     _initialize();
   }
 
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    _messSub?.cancel();
+    _usersSub?.cancel();
+    _availSub?.cancel();
+    _recordsSub?.cancel();
+    super.dispose();
+  }
+
   int get presentCount {
     return _availableMembers
-        .where((user) => _draftAttendance[user.uid] ?? _savedAttendance[user.uid] ?? false)
+        .where((user) => _draftAttendance[user.uid] ?? false)
         .length;
   }
 
@@ -54,26 +75,24 @@ class AttendanceController with ChangeNotifier {
     if (_draftAttendance.length != _savedAttendance.length) {
       return true;
     }
-
     for (final entry in _draftAttendance.entries) {
       if ((_savedAttendance[entry.key] ?? false) != entry.value) {
         return true;
       }
     }
-
     for (final entry in _savedAttendance.entries) {
       if ((_draftAttendance[entry.key] ?? false) != entry.value) {
         return true;
       }
     }
-
     return false;
   }
 
-  Future<void> _initialize() async {
+  void _initialize() {
     final user = _auth.currentUser;
     if (user != null) {
-      final userDoc = await _firestoreService
+      _userSub?.cancel();
+      _userSub = _firestoreService
           .documentStream(
             path: 'users/${user.uid}',
             builder: (data, id) => UserModel(
@@ -85,27 +104,28 @@ class AttendanceController with ChangeNotifier {
               messId: data['messId'],
             ),
           )
-          .first;
-      _messId = userDoc.messId;
-
-      if (_messId != null) {
-        final messDoc = await _firestoreService
-            .documentStream(
-              path: 'messes/$_messId',
-              builder: (data, id) => MessModel(
-                messId: id,
-                messName: data['messName'] ?? '',
-                createdBy: data['createdBy'] ?? '',
-                createdAt: data['createdAt'] != null
-                    ? (data['createdAt'] as Timestamp).toDate()
-                    : DateTime.now(),
-              ),
-            )
-            .first;
-        _messCreatedAt = messDoc.createdAt;
-      }
-
-      await _loadAttendance();
+          .listen((userDoc) {
+        _messId = userDoc.messId;
+        if (_messId != null) {
+          _messSub?.cancel();
+          _messSub = _firestoreService
+              .documentStream(
+                path: 'messes/$_messId',
+                builder: (data, id) => MessModel(
+                  messId: id,
+                  messName: data['messName'] ?? '',
+                  createdBy: data['createdBy'] ?? '',
+                  createdAt: data['createdAt'] != null
+                      ? (data['createdAt'] as Timestamp).toDate()
+                      : DateTime.now(),
+                ),
+              )
+              .listen((messDoc) {
+            _messCreatedAt = messDoc.createdAt;
+            _loadAttendance();
+          });
+        }
+      });
     }
   }
 
@@ -122,7 +142,7 @@ class AttendanceController with ChangeNotifier {
   }
 
   bool isMarkedPresent(String uid) {
-    return _draftAttendance[uid] ?? _savedAttendance[uid] ?? false;
+    return _draftAttendance[uid] ?? false;
   }
 
   void toggleAttendance(String uid, bool value) {
@@ -131,144 +151,157 @@ class AttendanceController with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> _loadAttendance() async {
+  void _loadAttendance() {
     if (_messId == null) return;
 
     _isLoading = true;
-    _draftAttendance.clear();
-    _savedAttendance.clear();
     notifyListeners();
 
-    try {
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final selectedDay = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    _computeAttendanceWindow();
+
+    _usersSub?.cancel();
+    _usersSub = _firestoreService
+        .collectionStream(
+          path: 'users',
+          queryBuilder: (query) => query
+              .where('messId', isEqualTo: _messId)
+              .where('approved', isEqualTo: true),
+          builder: (data, id) => UserModel(
+            uid: id,
+            name: data['name'] ?? '',
+            contactNumber: data['contactNumber'] ?? '',
+            role: data['role'] ?? '',
+            createdAt: data['createdAt'] != null
+                ? (data['createdAt'] as Timestamp).toDate()
+                : DateTime.now(),
+            messId: _messId,
+            approved: true,
+            permanentOff: data['permanentOff'] ?? false,
+            morningOff: data['morningOff'] ?? false,
+            eveningOff: data['eveningOff'] ?? false,
+          ),
+          sort: (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+        )
+        .listen((users) {
+      _rawUsers = users;
+      _recalculateState();
+    });
+
+    _availSub?.cancel();
+    _availSub = _firestoreService
+        .collectionStream(
+          path: 'availability',
+          queryBuilder: (query) => query
+              .where('messId', isEqualTo: _messId)
+              .where('date', isEqualTo: dateStr)
+              .where(
+                'meal',
+                isEqualTo: _selectedMeal == MealType.morning
+                    ? 'MORNING'
+                    : 'EVENING',
+              ),
+          builder: (data, id) => AvailabilityModel(
+            uid: data['uid'],
+            messId: data['messId'],
+            date: data['date'],
+            meal: data['meal'],
+            status: data['status'],
+          ),
+        )
+        .listen((docs) {
+      _rawAvails = docs;
+      _recalculateState();
+    });
+
+    final attendanceId = _attendanceDocId;
+    _recordsSub?.cancel();
+    _recordsSub = _firestoreService
+        .collectionStream(
+          path: 'attendance/$attendanceId/records',
+          builder: (data, id) => AttendanceRecord(
+            uid: id,
+            name: data['name'] ?? '',
+            present: data['present'] ?? false,
+          ),
+        )
+        .listen((records) {
+      _rawRecords = records;
+      _recalculateState();
+    });
+  }
+
+  void _recalculateState() {
+    final selectedDay = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+    final messCreatedDay = _messCreatedAt == null
+        ? null
+        : DateTime(
+            _messCreatedAt!.year,
+            _messCreatedAt!.month,
+            _messCreatedAt!.day,
+          );
+
+    final clientUsers = _rawUsers.where((u) {
+      if (u.role != 'CLIENT') return false;
+
+      final userCreatedDay = DateTime(
+        u.createdAt.year,
+        u.createdAt.month,
+        u.createdAt.day,
       );
-      final messCreatedDay = _messCreatedAt == null
-          ? null
-          : DateTime(
-              _messCreatedAt!.year,
-              _messCreatedAt!.month,
-              _messCreatedAt!.day,
-            );
-      _computeAttendanceWindow();
 
-      final users = await _firestoreService
-          .collectionStream(
-            path: 'users',
-            queryBuilder: (query) => query
-                .where('messId', isEqualTo: _messId)
-                .where('approved', isEqualTo: true),
-            builder: (data, id) => UserModel(
-              uid: id,
-              name: data['name'] ?? '',
-              contactNumber: data['contactNumber'] ?? '',
-              role: data['role'] ?? '',
-              createdAt: data['createdAt'] != null
-                  ? (data['createdAt'] as Timestamp).toDate()
-                  : DateTime.now(),
-              messId: _messId,
-              approved: true,
-              permanentOff: data['permanentOff'] ?? false,
-              morningOff: data['morningOff'] ?? false,
-              eveningOff: data['eveningOff'] ?? false,
-            ),
-            sort: (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
-          )
-          .first;
-
-      final clientUsers = users.where((u) {
-        if (u.role != 'CLIENT') return false;
-
-        final userCreatedDay = DateTime(
-          u.createdAt.year,
-          u.createdAt.month,
-          u.createdAt.day,
-        );
-
-        if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
-          return false;
-        }
-
-        return !selectedDay.isBefore(userCreatedDay);
-      }).toList();
-
-      final availabilityDocs = await _firestoreService
-          .collectionStream(
-            path: 'availability',
-            queryBuilder: (query) => query
-                .where('messId', isEqualTo: _messId)
-                .where('date', isEqualTo: dateStr)
-                .where(
-                  'meal',
-                  isEqualTo: _selectedMeal == MealType.morning
-                      ? 'MORNING'
-                      : 'EVENING',
-                ),
-            builder: (data, id) => AvailabilityModel(
-              uid: data['uid'],
-              messId: data['messId'],
-              date: data['date'],
-              meal: data['meal'],
-              status: data['status'],
-            ),
-          )
-          .first;
-
-      final offUids = <String>{};
-
-      for (final user in clientUsers) {
-        if (user.permanentOff) {
-          offUids.add(user.uid);
-          continue;
-        }
-        if (_selectedMeal == MealType.morning && user.morningOff) {
-          offUids.add(user.uid);
-          continue;
-        }
-        if (_selectedMeal == MealType.evening && user.eveningOff) {
-          offUids.add(user.uid);
-          continue;
-        }
+      if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
+        return false;
       }
 
-      for (final doc in availabilityDocs) {
-        if (doc.status == 'OFF') {
-          offUids.add(doc.uid);
-        }
+      return !selectedDay.isBefore(userCreatedDay);
+    }).toList();
+
+    final offUids = <String>{};
+
+    for (final user in clientUsers) {
+      if (user.permanentOff) {
+        offUids.add(user.uid);
+        continue;
       }
-
-      _availableMembers = clientUsers.where((u) => !offUids.contains(u.uid)).toList();
-
-      final attendanceId = _attendanceDocId;
-      final savedRecords = await _firestoreService
-          .collectionStream(
-            path: 'attendance/$attendanceId/records',
-            builder: (data, id) => AttendanceRecord(
-              uid: id,
-              name: data['name'] ?? '',
-              present: data['present'] ?? false,
-            ),
-          )
-          .first;
-
-      final savedRecordMap = {
-        for (final record in savedRecords) record.uid: record,
-      };
-
-      for (final user in _availableMembers) {
-        final savedRecord = savedRecordMap[user.uid];
-        _savedAttendance[user.uid] = savedRecord?.present ?? false;
-        _draftAttendance[user.uid] = savedRecord?.present ?? false;
+      if (_selectedMeal == MealType.morning && user.morningOff) {
+        offUids.add(user.uid);
+        continue;
       }
-    } catch (e) {
-      debugPrint('Error loading attendance: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      if (_selectedMeal == MealType.evening && user.eveningOff) {
+        offUids.add(user.uid);
+        continue;
+      }
     }
+
+    for (final doc in _rawAvails) {
+      if (doc.status == 'OFF') {
+        offUids.add(doc.uid);
+      } else if (doc.status == 'ON') {
+        offUids.remove(doc.uid); // They explicitly marked ON, override settings
+      }
+    }
+
+    _availableMembers = clientUsers.where((u) => !offUids.contains(u.uid)).toList();
+
+    for (final record in _rawRecords) {
+      _savedAttendance[record.uid] = record.present;
+    }
+
+    // Set _draftAttendance to _savedAttendance for missing keys
+    for (final user in _availableMembers) {
+      if (!_draftAttendance.containsKey(user.uid)) {
+         _draftAttendance[user.uid] = _savedAttendance[user.uid] ?? false;
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 
   String get _attendanceDocId {
@@ -371,7 +404,6 @@ class AttendanceController with ChangeNotifier {
           },
           merge: true,
         );
-        _savedAttendance[user.uid] = present;
       }
 
       return true;

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -21,36 +22,42 @@ class SelectMessController with ChangeNotifier {
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  StreamSubscription? _messesSub;
+
   SelectMessController() {
     _fetchMesses();
   }
 
-  Future<void> _fetchMesses() async {
+  @override
+  void dispose() {
+    _messesSub?.cancel();
+    super.dispose();
+  }
+
+  void _fetchMesses() {
     _isLoading = true;
     notifyListeners();
-    try {
-      // Fetch all messes - optimize query later if needed
-      _messes = await _firestoreService.collectionStream<MessModel>(
-        path: 'messes',
-        builder: (data, id) => MessModel(
-          messId: id,
-          messName: data['messName'] ?? 'Unknown',
-          createdBy: data['createdBy'] ?? '',
-          createdAt: (data['createdAt'] as Timestamp).toDate(),
-        ),
-      ).first; // Just take first batch for now
-      // Stream subscription usually handled by StreamBuilder in UI, but here we fetch once for selection list
-      // Creating a stream helper inside Controller or logic to fetch once:
-      // Since firestore_service returns Stream, update this to listen or use Future if logic allows.
-      // Modifying to use simple QuerySnapshot logic here would be easier, but sticking to service.
-      
-      // REFACTOR: Service only exposes stream. Let's use it as a stream.
-    } catch (e) {
-       // Handle error
-    } finally {
+    
+    _messesSub?.cancel();
+    _messesSub = _firestoreService.collectionStream<MessModel>(
+      path: 'messes',
+      builder: (data, id) => MessModel(
+        messId: id,
+        messName: data['messName'] ?? 'Unknown',
+        createdBy: data['createdBy'] ?? '',
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : DateTime.now(),
+      ),
+    ).listen((fetchedMesses) {
+      _messes = fetchedMesses;
       _isLoading = false;
       notifyListeners();
-    }
+    }, onError: (e) {
+      _errorMessage = 'Failed to load messes: $e';
+      _isLoading = false;
+      notifyListeners();
+    });
   }
   
   // Expose stream for UI
@@ -60,7 +67,9 @@ class SelectMessController with ChangeNotifier {
       messId: id,
       messName: data['messName'] ?? '',
       createdBy: data['createdBy'] ?? '',
-      createdAt: DateTime.now(), // Placeholder as timestamp conversion might vary
+      createdAt: data['createdAt'] != null
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(),
     ),
   );
 

@@ -17,49 +17,59 @@ class MembersController with ChangeNotifier {
   List<UserModel> _pendingMembers = [];
   List<UserModel> get pendingMembers => _pendingMembers;
 
-  bool _isLoading = false;
+  bool _isLoading = true;
   bool get isLoading => _isLoading;
 
   String? _messId;
   String? _errorMessage;
   String? get errorMessage => _errorMessage;
 
+  StreamSubscription? _userSubscription;
   StreamSubscription? _membersSubscription;
 
   MembersController() {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  void _initialize() {
      _isLoading = true;
      notifyListeners();
      try {
        final user = _auth.currentUser;
        if (user == null) {
          _errorMessage = 'User not logged in';
+         _isLoading = false;
+         notifyListeners();
          return;
        }
        
-       final userDoc = await _firestoreService.documentStream(
+       _userSubscription?.cancel();
+       _userSubscription = _firestoreService.documentStream(
           path: 'users/${user.uid}',
           builder: (data, id) => UserModel(
             uid: id,
             name: '', contactNumber: '', role: '', createdAt: DateTime.now(),
             messId: data['messId'],
           ),
-        ).first;
-        _messId = userDoc.messId;
-        
-        if (_messId == null) {
-          _errorMessage = 'No mess assigned';
-          return;
-        }
+        ).listen((userDoc) {
+          _messId = userDoc.messId;
+          
+          if (_messId == null) {
+            _errorMessage = 'No mess assigned';
+            _isLoading = false;
+            notifyListeners();
+            return;
+          }
 
-        _listenToMembers();
+          _listenToMembers();
+        }, onError: (e) {
+          _errorMessage = 'Failed to fetch admin user: $e';
+          _isLoading = false;
+          notifyListeners();
+        });
      } catch (e) {
        _errorMessage = 'Failed to initialize: $e';
        debugPrint('MembersController init error: $e');
-     } finally {
        _isLoading = false;
        notifyListeners();
      }
@@ -154,6 +164,7 @@ class MembersController with ChangeNotifier {
 
   @override
   void dispose() {
+    _userSubscription?.cancel();
     _membersSubscription?.cancel();
     super.dispose();
   }

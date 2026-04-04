@@ -33,39 +33,59 @@ class AvailabilityListController with ChangeNotifier {
   String? _messId;
   DateTime? _messCreatedAt;
 
+  StreamSubscription? _userSub;
+  StreamSubscription? _messSub;
+  StreamSubscription? _usersSub;
+  StreamSubscription? _availabilitySub;
+
+  List<UserModel> _rawUsers = [];
+  List<AvailabilityModel> _rawAvails = [];
+
   AvailabilityListController() {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  @override
+  void dispose() {
+    _userSub?.cancel();
+    _messSub?.cancel();
+    _usersSub?.cancel();
+    _availabilitySub?.cancel();
+    super.dispose();
+  }
+
+  void _initialize() {
     final user = _auth.currentUser;
     if (user != null) {
-      final userDoc = await _firestoreService.documentStream(
+      _userSub?.cancel();
+      _userSub = _firestoreService.documentStream(
         path: 'users/${user.uid}',
         builder: (data, id) => UserModel(
           uid: id,
           name: '', contactNumber: '', role: '', createdAt: DateTime.now(),
           messId: data['messId'],
         ),
-      ).first;
-      _messId = userDoc.messId;
+      ).listen((userDoc) {
+        _messId = userDoc.messId;
 
-      if (_messId != null) {
-        final messDoc = await _firestoreService.documentStream(
-          path: 'messes/$_messId',
-          builder: (data, id) => MessModel(
-            messId: id,
-            messName: data['messName'] ?? '',
-            createdBy: data['createdBy'] ?? '',
-            createdAt: data['createdAt'] != null
-                ? (data['createdAt'] as Timestamp).toDate()
-                : DateTime.now(),
-          ),
-        ).first;
-        _messCreatedAt = messDoc.createdAt;
-      }
-
-      await _loadAvailability();
+        if (_messId != null) {
+          _messSub?.cancel();
+          _messSub = _firestoreService.documentStream(
+            path: 'messes/$_messId',
+            builder: (data, id) => MessModel(
+              messId: id,
+              messName: data['messName'] ?? '',
+              createdBy: data['createdBy'] ?? '',
+              createdAt: data['createdAt'] != null
+                  ? (data['createdAt'] as Timestamp).toDate()
+                  : DateTime.now(),
+            ),
+          ).listen((messDoc) {
+            _messCreatedAt = messDoc.createdAt;
+            _loadAvailability();
+          });
+        }
+      });
     }
   }
 
@@ -87,113 +107,120 @@ class AvailabilityListController with ChangeNotifier {
   /// Count of available members
   int get availableCount => _allMembers.where((u) => isUserAvailable(u.uid)).length;
 
-  Future<void> _loadAvailability() async {
+  void _loadAvailability() {
     if (_messId == null) return;
     
     _isLoading = true;
     notifyListeners();
 
-    try {
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final selectedDay = DateTime(
-        _selectedDate.year,
-        _selectedDate.month,
-        _selectedDate.day,
+    final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+      
+    // 1. Fetch ALL approved users for this mess (including admins filtered out later)
+    _usersSub?.cancel();
+    _usersSub = _firestoreService.collectionStream(
+      path: 'users',
+      queryBuilder: (query) => query.where('messId', isEqualTo: _messId)
+                                    .where('approved', isEqualTo: true),
+      builder: (data, id) => UserModel(
+        uid: id,
+        name: data['name'] ?? '',
+        contactNumber: data['contactNumber'] ?? '',
+        role: data['role'] ?? '',
+        createdAt: data['createdAt'] != null
+            ? (data['createdAt'] as Timestamp).toDate()
+            : DateTime.now(),
+        messId: _messId,
+        approved: true,
+        permanentOff: data['permanentOff'] ?? false,
+        morningOff: data['morningOff'] ?? false,
+        eveningOff: data['eveningOff'] ?? false,
+      ),
+    ).listen((users) {
+      _rawUsers = users;
+      _recalculateState();
+    });
+
+    // 2. Fetch availability documents for this date/meal
+    _availabilitySub?.cancel();
+    _availabilitySub = _firestoreService.collectionStream(
+      path: 'availability',
+      queryBuilder: (query) => query.where('messId', isEqualTo: _messId)
+                                    .where('date', isEqualTo: dateStr)
+                                    .where('meal', isEqualTo: _selectedMeal == MealType.morning ? 'MORNING' : 'EVENING'),
+      builder: (data, id) => AvailabilityModel(
+         uid: data['uid'],
+         messId: data['messId'],
+         date: data['date'],
+         meal: data['meal'],
+         status: data['status'],
+      ),
+    ).listen((docs) {
+      _rawAvails = docs;
+      _recalculateState();
+    });
+  }
+
+  void _recalculateState() {
+    final selectedDay = DateTime(
+      _selectedDate.year,
+      _selectedDate.month,
+      _selectedDate.day,
+    );
+    final messCreatedDay = _messCreatedAt == null
+        ? null
+        : DateTime(
+            _messCreatedAt!.year,
+            _messCreatedAt!.month,
+            _messCreatedAt!.day,
+          );
+
+    // Keep only CLIENTs who had actually joined by the selected date
+    _allMembers = _rawUsers.where((u) {
+      if (u.role != 'CLIENT') return false;
+
+      final userCreatedDay = DateTime(
+        u.createdAt.year,
+        u.createdAt.month,
+        u.createdAt.day,
       );
-      final messCreatedDay = _messCreatedAt == null
-          ? null
-          : DateTime(
-              _messCreatedAt!.year,
-              _messCreatedAt!.month,
-              _messCreatedAt!.day,
-            );
-      
-      // 1. Fetch ALL approved users for this mess (including admins filtered out later)
-      final users = await _firestoreService.collectionStream(
-        path: 'users',
-        queryBuilder: (query) => query.where('messId', isEqualTo: _messId)
-                                      .where('approved', isEqualTo: true),
-        builder: (data, id) => UserModel(
-          uid: id,
-          name: data['name'] ?? '',
-          contactNumber: data['contactNumber'] ?? '',
-          role: data['role'] ?? '',
-          createdAt: data['createdAt'] != null
-              ? (data['createdAt'] as Timestamp).toDate()
-              : DateTime.now(),
-          messId: _messId,
-          approved: true,
-          permanentOff: data['permanentOff'] ?? false,
-          morningOff: data['morningOff'] ?? false,
-          eveningOff: data['eveningOff'] ?? false,
-        ),
-      ).first;
 
-      // Keep only CLIENTs who had actually joined by the selected date,
-      // and never show members before the mess itself existed.
-      _allMembers = users.where((u) {
-        if (u.role != 'CLIENT') return false;
-
-        final userCreatedDay = DateTime(
-          u.createdAt.year,
-          u.createdAt.month,
-          u.createdAt.day,
-        );
-
-        if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
-          return false;
-        }
-
-        return !selectedDay.isBefore(userCreatedDay);
-      }).toList();
-
-      // 2. Fetch availability documents for this date/meal
-      final availabilityDocs = await _firestoreService.collectionStream(
-        path: 'availability',
-        queryBuilder: (query) => query.where('messId', isEqualTo: _messId)
-                                      .where('date', isEqualTo: dateStr)
-                                      .where('meal', isEqualTo: _selectedMeal == MealType.morning ? 'MORNING' : 'EVENING'),
-        builder: (data, id) => AvailabilityModel(
-           uid: data['uid'],
-           messId: data['messId'],
-           date: data['date'],
-           meal: data['meal'],
-           status: data['status'],
-        ),
-      ).first;
-
-      // 3. Build the OFF set: permanent off + meal-specific off + availability doc OFF
-      _offUids = {};
-      
-      for (final user in _allMembers) {
-        // Permanent off
-        if (user.permanentOff) {
-          _offUids.add(user.uid);
-          continue;
-        }
-        // Per-meal off from user profile
-        if (_selectedMeal == MealType.morning && user.morningOff) {
-          _offUids.add(user.uid);
-          continue;
-        }
-        if (_selectedMeal == MealType.evening && user.eveningOff) {
-          _offUids.add(user.uid);
-          continue;
-        }
+      if (messCreatedDay != null && selectedDay.isBefore(messCreatedDay)) {
+        return false;
       }
 
-      // From availability collection
-      for (final doc in availabilityDocs) {
-        if (doc.status == 'OFF') {
-          _offUids.add(doc.uid);
-        }
+      return !selectedDay.isBefore(userCreatedDay);
+    }).toList();
+
+    // Build the OFF set: permanent off + meal-specific off + availability doc OFF
+    _offUids = {};
+    
+    for (final user in _allMembers) {
+      // Permanent off
+      if (user.permanentOff) {
+        _offUids.add(user.uid);
+        continue;
       }
-      
-    } catch (e) {
-      debugPrint('Error loading availability: $e');
-    } finally {
-      _isLoading = false;
-      notifyListeners();
+      // Per-meal off from user profile
+      if (_selectedMeal == MealType.morning && user.morningOff) {
+        _offUids.add(user.uid);
+        continue;
+      }
+      if (_selectedMeal == MealType.evening && user.eveningOff) {
+        _offUids.add(user.uid);
+        continue;
+      }
     }
+
+    // From availability collection
+    for (final doc in _rawAvails) {
+      if (doc.status == 'OFF') {
+        _offUids.add(doc.uid);
+      } else if (doc.status == 'ON') {
+        _offUids.remove(doc.uid); // They marked ON, override settings
+      }
+    }
+
+    _isLoading = false;
+    notifyListeners();
   }
 }

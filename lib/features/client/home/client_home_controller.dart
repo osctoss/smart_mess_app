@@ -26,19 +26,25 @@ class ClientHomeController with ChangeNotifier {
   String? get errorMessage => _errorMessage;
 
   StreamSubscription? _userSubscription;
+  StreamSubscription? _messSubscription;
 
   ClientHomeController() {
     _initialize();
   }
 
-  Future<void> _initialize() async {
+  void _initialize() {
     _isLoading = true;
     notifyListeners();
 
     try {
       final currentUser = _auth.currentUser;
-      if (currentUser == null) return;
+      if (currentUser == null) {
+        _isLoading = false;
+        notifyListeners();
+        return;
+      }
 
+      _userSubscription?.cancel();
       // Listen to user doc for real-time updates (e.g. after approval)
       _userSubscription = _firestoreService.documentStream(
         path: 'users/${currentUser.uid}',
@@ -52,30 +58,34 @@ class ClientHomeController with ChangeNotifier {
           createdAt: (data['createdAt'] as Timestamp).toDate(),
         ),
       ).listen(
-        (userModel) async {
+        (userModel) {
           _user = userModel;
 
           // Fetch joined mess details if user has a messId
           if (userModel.messId != null && userModel.messId!.isNotEmpty) {
-            try {
-              _joinedMess = await _firestoreService.documentStream(
-                path: 'messes/${userModel.messId}',
-                builder: (data, id) => MessModel(
-                  messId: id,
-                  messName: data['messName'] ?? '',
-                  createdBy: data['createdBy'] ?? '',
-                  createdAt: (data['createdAt'] as Timestamp).toDate(),
-                ),
-              ).first;
-            } catch (e) {
-              _joinedMess = null;
-            }
+            _messSubscription?.cancel();
+            _messSubscription = _firestoreService.documentStream(
+              path: 'messes/${userModel.messId}',
+              builder: (data, id) => MessModel(
+                messId: id,
+                messName: data['messName'] ?? '',
+                createdBy: data['createdBy'] ?? '',
+                createdAt: (data['createdAt'] as Timestamp).toDate(),
+              ),
+            ).listen((mess) {
+               _joinedMess = mess;
+               _isLoading = false;
+               notifyListeners();
+            }, onError: (_) {
+               _joinedMess = null;
+               _isLoading = false;
+               notifyListeners();
+            });
           } else {
             _joinedMess = null;
+            _isLoading = false;
+            notifyListeners();
           }
-
-          _isLoading = false;
-          notifyListeners();
         },
         onError: (e) {
           _errorMessage = 'Failed to load user data: $e';
@@ -136,13 +146,13 @@ class ClientHomeController with ChangeNotifier {
   }
 
   void refresh() {
-    _joinedMess = null;
     _initialize();
   }
 
   @override
   void dispose() {
     _userSubscription?.cancel();
+    _messSubscription?.cancel();
     super.dispose();
   }
 }
