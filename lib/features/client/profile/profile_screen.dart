@@ -84,11 +84,21 @@ class ProfileScreen extends StatelessWidget {
 
                 // Options
                 _buildOptionCard(
+                  icon: Icons.person_rounded,
+                  iconGradient: AppColors.primaryGradient,
+                  label: 'Change Name',
+                  onTap: () => Navigator.pushNamed(context, AppRoutes.changeName),
+                  index: 0,
+                ),
+
+                const SizedBox(height: 12),
+
+                _buildOptionCard(
                   icon: Icons.lock_rounded,
                   iconGradient: AppColors.blueGradient,
                   label: 'Change Password',
                   onTap: () => Navigator.pushNamed(context, AppRoutes.changePassword),
-                  index: 0,
+                  index: 1,
                 ),
 
                 const SizedBox(height: 12),
@@ -98,7 +108,7 @@ class ProfileScreen extends StatelessWidget {
                   iconGradient: AppColors.tealGradient,
                   label: 'Change Phone Number',
                   onTap: () => Navigator.pushNamed(context, AppRoutes.changePhone),
-                  index: 1,
+                  index: 2,
                 ),
 
                 const SizedBox(height: 24),

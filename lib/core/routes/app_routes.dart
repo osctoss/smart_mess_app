@@ -9,8 +9,10 @@ import '../../features/client/availability/availability_screen.dart';
 import '../../features/client/notifications/client_notifications_screen.dart';
 import '../../features/client/home/client_home_screen.dart';
 import '../../features/client/profile/profile_screen.dart';
+import '../../features/client/profile/change_name_screen.dart';
 import '../../features/client/profile/change_password_screen.dart';
 import '../../features/client/profile/change_phone_screen.dart';
+import '../../features/admin/home/admin_home_screen.dart';
 import '../../features/admin/dashboard/admin_dashboard.dart';
 import '../../features/admin/menu/menu_screen.dart';
 import '../../features/admin/availability_list/availability_list_screen.dart';
@@ -32,8 +34,10 @@ class AppRoutes {
   static const String clientHome = '/clientHome';
   static const String clientNotifications = '/clientNotifications';
   static const String clientProfile = '/clientProfile';
+  static const String changeName = '/changeName';
   static const String changePassword = '/changePassword';
   static const String changePhone = '/changePhone';
+  static const String adminHome = '/adminHome';
   static const String adminDashboard = '/adminDashboard';
   static const String menuManagement = '/menuManagement';
   static const String availabilityList = '/availabilityList';
@@ -90,10 +94,14 @@ class AppRoutes {
         return _buildRoute(const ClientNotificationsScreen(), settings);
       case clientProfile:
         return _buildRoute(const ProfileScreen(), settings);
+      case changeName:
+        return _buildRoute(const ChangeNameScreen(), settings);
       case changePassword:
         return _buildRoute(const ChangePasswordScreen(), settings);
       case changePhone:
         return _buildRoute(ChangePhoneScreen(), settings);
+      case adminHome:
+        return _buildRoute(const AdminHomeScreen(), settings);
       case adminDashboard:
         return _buildRoute(const AdminDashboard(), settings);
       case menuManagement:

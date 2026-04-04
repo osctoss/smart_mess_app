@@ -19,7 +19,46 @@ class AdminDashboard extends StatelessWidget {
       child: GradientScaffold(
         appBar: AppBar(
           title: Consumer<AdminDashboardController>(
-            builder: (_, controller, child) => Text(controller.mess?.messName ?? 'Admin Dashboard'),
+            builder: (context, controller, child) {
+              final messName = controller.mess?.messName ?? 'Admin Dashboard';
+              return Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      messName,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (controller.mess != null) ...[
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: controller.isUpdatingMessName
+                          ? null
+                          : () => _handleEditMessName(context, controller),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight.withValues(alpha: 0.7),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppColors.glassBorder),
+                        ),
+                        child: controller.isUpdatingMessName
+                            ? const Padding(
+                                padding: EdgeInsets.all(7),
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : Icon(
+                                Icons.edit_rounded,
+                                size: 16,
+                                color: AppColors.textPrimary,
+                              ),
+                      ),
+                    ),
+                  ],
+                ],
+              );
+            },
           ),
           actions: [
             IconButton(
@@ -148,6 +187,108 @@ class AdminDashboard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<void> _handleEditMessName(
+    BuildContext context,
+    AdminDashboardController controller,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final nextName = await _showEditMessNameDialog(
+      context,
+      controller.mess?.messName ?? '',
+    );
+
+    if (nextName == null) return;
+
+    try {
+      await controller.updateMessName(nextName);
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Mess name updated successfully.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
+  Future<String?> _showEditMessNameDialog(
+    BuildContext context,
+    String initialName,
+  ) async {
+    final textController = TextEditingController(
+      text: initialName,
+    );
+    String? errorText;
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (_, setDialogState) {
+            void submit() {
+              final nextName = textController.text.trim();
+
+              if (nextName.isEmpty) {
+                setDialogState(() => errorText = 'Mess name is required.');
+                return;
+              }
+
+              Navigator.of(dialogContext).pop(nextName);
+            }
+
+            return AlertDialog(
+              backgroundColor: AppColors.surfaceLight,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: AppColors.glassBorder),
+              ),
+              title: const Text('Edit Mess Name'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: textController,
+                    autofocus: true,
+                    textInputAction: TextInputAction.done,
+                    onSubmitted: (_) => submit(),
+                    decoration: InputDecoration(
+                      labelText: 'Mess Name',
+                      errorText: errorText,
+                      prefixIcon: const Icon(Icons.home_work_rounded),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'This will update the mess name everywhere it is shown.',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: submit,
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    textController.dispose();
+    return result;
   }
 }
 

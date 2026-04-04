@@ -19,6 +19,9 @@ class AdminDashboardController with ChangeNotifier {
   bool _isLoading = true;
   bool get isLoading => _isLoading;
 
+  bool _isUpdatingMessName = false;
+  bool get isUpdatingMessName => _isUpdatingMessName;
+
   StreamSubscription? _userSub;
   StreamSubscription? _messSub;
   StreamSubscription? _membersSub;
@@ -99,5 +102,38 @@ class AdminDashboardController with ChangeNotifier {
       _totalMembers = members.length;
       notifyListeners();
     });
+  }
+
+  Future<void> updateMessName(String newMessName) async {
+    final currentMess = _mess;
+    if (currentMess == null) {
+      throw Exception('Mess details are not available.');
+    }
+
+    final trimmedName = newMessName.trim();
+    if (trimmedName.isEmpty) {
+      throw Exception('Mess name is required.');
+    }
+
+    if (trimmedName.length < 2) {
+      throw Exception('Mess name must be at least 2 characters.');
+    }
+
+    if (trimmedName.length > 60) {
+      throw Exception('Mess name must be 60 characters or less.');
+    }
+
+    _isUpdatingMessName = true;
+    notifyListeners();
+
+    try {
+      await _firestoreService.updateData(
+        path: 'messes/${currentMess.messId}',
+        data: {'messName': trimmedName},
+      );
+    } finally {
+      _isUpdatingMessName = false;
+      notifyListeners();
+    }
   }
 }

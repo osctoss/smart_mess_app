@@ -1,8 +1,10 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseFunctions _functions = FirebaseFunctions.instanceFor(
     region: 'asia-south1',
   );
@@ -131,6 +133,24 @@ class AuthService {
     }
 
     await user.updatePassword(newPassword);
+  }
+
+  Future<void> updateDisplayName(String newName) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw Exception('No authenticated user found.');
+    }
+
+    final trimmedName = newName.trim();
+    if (trimmedName.isEmpty) {
+      throw Exception('Name cannot be empty.');
+    }
+
+    await user.updateDisplayName(trimmedName);
+    await _firestore.collection('users').doc(user.uid).update({
+      'name': trimmedName,
+    });
+    await user.reload();
   }
 
   Future<void> signOut() async {
