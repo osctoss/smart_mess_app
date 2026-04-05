@@ -12,14 +12,17 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 - Phone number authentication with OTP verification
 - Role-based access control — **Admin** & **Client**
 - Auto-login via splash screen with role-based routing
+- **Firebase App Check** integrated (Play Integrity & Debug Provider)
 - New clients can skip mess selection during signup and join later
 - Server-side signup & OTP rate-limiting via **Cloud Functions**
+- **Enhanced Local Testing:** Auth debug settings enabled for seamless OTP testing manually.
 
 ### 👨‍💼 Admin Panel
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| **Dashboard** | Quick Actions | Access to menu, availability, members, attendance & notifications |
+| **Admin Home Hub** | Mess Selection | New centralized hub to manage multiple mess organizations |
+| **Dashboard** | Quick Actions | Access to menu, availability, members, attendance & notifications. Admins can also update mess names here. |
 | **Menu Management** | Daily Menus | Set/update morning & evening meal menus |
 | **Availability List** | Meal Tracking | View available clients for each meal; generate attendance records |
 | **Members Panel** | Member Mgmt | View all members, approve/remove, manage diet balances |
@@ -90,11 +93,13 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
     <td align="center"><img src="assets/UI_visuals/splash.jpg" width="200"/><br/><b>Splash Screen</b></td>
     <td align="center"><img src="assets/UI_visuals/login.jpg" width="200"/><br/><b>Login</b></td>
     <td align="center"><img src="assets/UI_visuals/sign_up.jpg" width="200"/><br/><b>Sign Up</b></td>
+    <td align="center"><img src="assets/UI_visuals/profile.jpg" width="200"/><br/><b>Profile</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/UI_visuals/profile.jpg" width="200"/><br/><b>Profile</b></td>
+    <td align="center"><img src="assets/UI_visuals/update_name.jpg" width="200"/><br/><b>Update Name</b></td>
     <td align="center"><img src="assets/UI_visuals/update_password.jpg" width="200"/><br/><b>Update Password</b></td>
     <td align="center"><img src="assets/UI_visuals/update_phone.jpg" width="200"/><br/><b>Update Phone</b></td>
+    <td></td>
   </tr>
 </table>
 
@@ -102,11 +107,13 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
 
 <table>
   <tr>
+    <td align="center"><img src="assets/UI_visuals/Admin_home.jpg" width="200"/><br/><b>Admin Home Hub</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_dashboard.jpg" width="200"/><br/><b>Dashboard</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_mess_name_change.jpg" width="200"/><br/><b>Mess Name Update</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_menu_management.jpg" width="200"/><br/><b>Menu Management</b></td>
-    <td align="center"><img src="assets/UI_visuals/Admin_members.jpg" width="200"/><br/><b>Members</b></td>
   </tr>
   <tr>
+    <td align="center"><img src="assets/UI_visuals/Admin_members.jpg" width="200"/><br/><b>Members</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_diet_allocation.jpg" width="200"/><br/><b>Diet Allocation</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_notification.jpg" width="200"/><br/><b>Notifications</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_availability_info.jpg" width="200"/><br/><b>Availability List</b></td>
@@ -115,6 +122,7 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
     <td align="center"><img src="assets/UI_visuals/Admin_availibilty_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_attendance_info.jpg" width="200"/><br/><b>Attendance</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_attendance_info_2.jpg" width="200"/><br/><b>Attendance Records</b></td>
+    <td></td>
   </tr>
 </table>
 
@@ -252,6 +260,7 @@ smart_mess_app/
 |-------|------------|
 | **Framework** | Flutter (Dart SDK ^3.10.8, Material 3) |
 | **Backend** | Firebase (Auth + Cloud Firestore + Cloud Functions v2) |
+| **Security** | **Firebase App Check** (Play Integrity + Debug Provider) |
 | **Auth** | Firebase Phone Authentication (OTP) |
 | **State Management** | Provider |
 | **Serverless** | Firebase Cloud Functions (Node.js) — diet deduction, signup & OTP rate-limiting |
