@@ -193,7 +193,6 @@ class AdminDashboard extends StatelessWidget {
     BuildContext context,
     AdminDashboardController controller,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
     final nextName = await _showEditMessNameDialog(
       context,
       controller.mess?.messName ?? '',
@@ -204,12 +203,12 @@ class AdminDashboard extends StatelessWidget {
     try {
       await controller.updateMessName(nextName);
       if (!context.mounted) return;
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Mess name updated successfully.')),
       );
     } catch (e) {
       if (!context.mounted) return;
-      messenger.showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
     }
@@ -219,76 +218,95 @@ class AdminDashboard extends StatelessWidget {
     BuildContext context,
     String initialName,
   ) async {
-    final textController = TextEditingController(
-      text: initialName,
-    );
-    String? errorText;
-
-    final result = await showDialog<String>(
+    return await showDialog<String>(
       context: context,
       builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (_, setDialogState) {
-            void submit() {
-              final nextName = textController.text.trim();
-
-              if (nextName.isEmpty) {
-                setDialogState(() => errorText = 'Mess name is required.');
-                return;
-              }
-
-              Navigator.of(dialogContext).pop(nextName);
-            }
-
-            return AlertDialog(
-              backgroundColor: AppColors.surfaceLight,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(color: AppColors.glassBorder),
-              ),
-              title: const Text('Edit Mess Name'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  TextField(
-                    controller: textController,
-                    autofocus: true,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => submit(),
-                    decoration: InputDecoration(
-                      labelText: 'Mess Name',
-                      errorText: errorText,
-                      prefixIcon: const Icon(Icons.home_work_rounded),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'This will update the mess name everywhere it is shown.',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: submit,
-                  child: const Text('Save'),
-                ),
-              ],
-            );
-          },
-        );
+        return _EditMessNameDialogContent(initialName: initialName);
       },
     );
+  }
+}
 
+class _EditMessNameDialogContent extends StatefulWidget {
+  final String initialName;
+
+  const _EditMessNameDialogContent({required this.initialName});
+
+  @override
+  State<_EditMessNameDialogContent> createState() => _EditMessNameDialogContentState();
+}
+
+class _EditMessNameDialogContentState extends State<_EditMessNameDialogContent> {
+  late final TextEditingController textController;
+  String? errorText;
+
+  @override
+  void initState() {
+    super.initState();
+    textController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
     textController.dispose();
-    return result;
+    super.dispose();
+  }
+
+  void submit() {
+    final nextName = textController.text.trim();
+
+    if (nextName.isEmpty) {
+      setState(() => errorText = 'Mess name is required.');
+      return;
+    }
+
+    Navigator.of(context).pop(nextName);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: AppColors.surfaceLight,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: AppColors.glassBorder),
+      ),
+      title: const Text('Edit Mess Name'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: textController,
+            autofocus: true,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => submit(),
+            decoration: InputDecoration(
+              labelText: 'Mess Name',
+              errorText: errorText,
+              prefixIcon: const Icon(Icons.home_work_rounded),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'This will update the mess name everywhere it is shown.',
+            style: AppTextStyles.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        ElevatedButton(
+          onPressed: submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
   }
 }
 
