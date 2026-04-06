@@ -136,8 +136,8 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
     <td align="center"><img src="assets/UI_visuals/Client_notification.jpg" width="200"/><br/><b>Notifications</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/UI_visuals/Client_availability_info.jpg" width="200"/><br/><b>Availability Calendar</b></td>
-    <td align="center"><img src="assets/UI_visuals/Client_availability_info_2.jpg" width="200"/><br/><b>Availability Lock</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_availability_info.jpg" width="200"/><br/><b>Availability Status</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_availability_info_2.jpg" width="200"/><br/><b>Recurring Meal-Off</b></td>
     <td align="center"><img src="assets/UI_visuals/Client_availability_info_3.jpg" width="200"/><br/><b>Permanent Off</b></td>
     <td></td>
   </tr>
