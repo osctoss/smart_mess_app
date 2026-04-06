@@ -96,7 +96,9 @@ class AdminDashboardController with ChangeNotifier {
     _membersSub?.cancel();
     _membersSub = _firestoreService.collectionStream(
       path: 'users',
-      queryBuilder: (query) => query.where('messId', isEqualTo: messId),
+      queryBuilder: (query) => query
+          .where('messId', isEqualTo: messId)
+          .where('role', isEqualTo: 'CLIENT'),
       builder: (data, id) => id,
     ).listen((members) {
       _totalMembers = members.length;

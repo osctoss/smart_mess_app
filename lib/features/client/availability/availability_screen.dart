@@ -70,8 +70,8 @@ class AvailabilityScreen extends StatelessWidget {
 
                   // Permanent OFF toggle
                   GlassCard(
-                    borderColor: controller.isPermanentOff ? AppColors.accentRose.withValues(alpha: 0.4) : null,
-                    backgroundColor: controller.isPermanentOff ? AppColors.accentRose.withValues(alpha: 0.08) : null,
+                    borderColor: controller.isGlobalPermanentOff ? AppColors.accentRose.withValues(alpha: 0.4) : null,
+                    backgroundColor: controller.isGlobalPermanentOff ? AppColors.accentRose.withValues(alpha: 0.08) : null,
                     child: Row(
                       children: [
                         Container(
@@ -95,7 +95,7 @@ class AvailabilityScreen extends StatelessWidget {
                           ),
                         ),
                         Switch(
-                          value: controller.isPermanentOff,
+                          value: controller.isGlobalPermanentOff,
                           onChanged: (val) => controller.togglePermanentOff(val),
                           activeThumbColor: AppColors.accentRose,
                           activeTrackColor: AppColors.accentRose.withValues(alpha: 0.3),
@@ -113,8 +113,10 @@ class AvailabilityScreen extends StatelessWidget {
                     gradient: AppColors.amberGradient,
                     accentColor: AppColors.accentAmber,
                     isOn: controller.isMorningOn,
-                    isLocked: controller.isLockedMorning,
+                    isLocked: controller.isLockedMorning || controller.isGlobalPermanentOff || controller.isPermanentMorningOff,
                     onChanged: (val) => controller.toggleMorning(val),
+                    isPermanentOff: controller.isPermanentMorningOff,
+                    onPermanentOffChanged: controller.isGlobalPermanentOff ? null : (val) => controller.togglePermanentMorningOff(val ?? false),
                     index: 1,
                   ),
 
@@ -127,8 +129,10 @@ class AvailabilityScreen extends StatelessWidget {
                     gradient: AppColors.primaryGradient,
                     accentColor: AppColors.accentOrange,
                     isOn: controller.isEveningOn,
-                    isLocked: controller.isLockedEvening,
+                    isLocked: controller.isLockedEvening || controller.isGlobalPermanentOff || controller.isPermanentEveningOff,
                     onChanged: (val) => controller.toggleEvening(val),
+                    isPermanentOff: controller.isPermanentEveningOff,
+                    onPermanentOffChanged: controller.isGlobalPermanentOff ? null : (val) => controller.togglePermanentEveningOff(val ?? false),
                     index: 2,
                   ),
                 ],
@@ -181,6 +185,8 @@ class AvailabilityScreen extends StatelessWidget {
     required bool isOn,
     required bool isLocked,
     required ValueChanged<bool> onChanged,
+    required bool isPermanentOff,
+    required ValueChanged<bool?>? onPermanentOffChanged,
     required int index,
   }) {
     return GlassCard(
@@ -201,6 +207,27 @@ class AvailabilityScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                
+                const SizedBox(height: 4),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Checkbox(
+                        value: isPermanentOff,
+                        onChanged: onPermanentOffChanged,
+                        activeColor: AppColors.accentRose,
+                        side: BorderSide(color: AppColors.textMuted),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('Permanent Off', style: AppTextStyles.caption.copyWith(color: isPermanentOff ? AppColors.accentRose : AppColors.textSecondary)),
+                  ],
+                ),
+
                 if (isLocked) ...[
                   const SizedBox(height: 4),
                   Row(

@@ -15,6 +15,7 @@ class NotificationService {
       NotificationType.approvalRequest => 'APPROVAL_REQUEST',
       NotificationType.deleteRequest => 'DELETE_REQUEST',
       NotificationType.dietAllocated => 'DIET_ALLOCATED',
+      NotificationType.dietDeducted => 'DIET_DEDUCTED',
       NotificationType.accountDeleted => 'ACCOUNT_DELETED',
     };
 

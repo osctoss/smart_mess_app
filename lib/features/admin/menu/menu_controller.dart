@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:intl/intl.dart';
 import '../../../core/services/firestore_service.dart';
-import '../../../models/menu_model.dart';
 import '../../../models/user_model.dart';
 
 class MenuManagementController with ChangeNotifier {
@@ -14,8 +12,8 @@ class MenuManagementController with ChangeNotifier {
   final TextEditingController morningController = TextEditingController();
   final TextEditingController eveningController = TextEditingController();
 
-  DateTime _selectedDate = DateTime.now();
-  DateTime get selectedDate => _selectedDate;
+  int _selectedWeekday = DateTime.now().weekday;
+  int get selectedWeekday => _selectedWeekday;
 
   bool _isLoading = false;
   bool get isLoading => _isLoading;
@@ -53,7 +51,7 @@ class MenuManagementController with ChangeNotifier {
           ),
         ).listen((userDoc) {
           _messId = userDoc.messId;
-          _loadMenu(_selectedDate);
+          _loadMenu(_selectedWeekday);
         }, onError: (e) {
           _isLoading = false;
           notifyListeners();
@@ -68,42 +66,36 @@ class MenuManagementController with ChangeNotifier {
     }
   }
 
-  void onDateSelected(DateTime date) {
-    _selectedDate = date;
-    _loadMenu(date);
+  void onWeekdaySelected(int weekday) {
+    _selectedWeekday = weekday;
+    _loadMenu(weekday);
   }
 
-  void _loadMenu(DateTime date) {
+  void _loadMenu(int weekday) {
     if (_messId == null) return;
     
     _isLoading = true;
     notifyListeners();
 
-    final dateStr = DateFormat('yyyy-MM-dd').format(date);
-    final menuId = '${_messId}_$dateStr';
-
     _menuSub?.cancel();
     _menuSub = _firestoreService.documentStream(
-      path: 'menus/$menuId',
-      builder: (data, id) => MenuModel(
-        messId: data['messId'] ?? '',
-        date: data['date'] ?? '',
-        morningMenu: data['morningMenu'] ?? '',
-        eveningMenu: data['eveningMenu'] ?? '',
-        updatedBy: '',
-      ),
-    ).listen((menu) {
+      path: 'weekly_menus/$_messId',
+      builder: (data, id) => data,
+    ).listen((menuData) {
+      final dayData = menuData[weekday.toString()] as Map<String, dynamic>? ?? {};
+      final morningMenu = dayData['morning'] as String? ?? '';
+      final eveningMenu = dayData['evening'] as String? ?? '';
+
       // Only update if not actively typing or just initialize
-      if (morningController.text != menu.morningMenu) {
-         morningController.text = menu.morningMenu;
+      if (morningController.text != morningMenu) {
+         morningController.text = morningMenu;
       }
-      if (eveningController.text != menu.eveningMenu) {
-         eveningController.text = menu.eveningMenu;
+      if (eveningController.text != eveningMenu) {
+         eveningController.text = eveningMenu;
       }
       _isLoading = false;
       notifyListeners();
     }, onError: (e) {
-      // Menu not found for this date
       morningController.text = '';
       eveningController.text = '';
       _isLoading = false;
@@ -118,19 +110,17 @@ class MenuManagementController with ChangeNotifier {
     notifyListeners();
 
     try {
-      final dateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      final menuId = '${_messId}_$dateStr';
       final currentUser = _auth.currentUser;
 
       await _firestoreService.setData(
-        path: 'menus/$menuId',
+        path: 'weekly_menus/$_messId',
         data: {
-          'messId': _messId,
-          'date': dateStr,
-          'morningMenu': morningController.text.trim(),
-          'eveningMenu': eveningController.text.trim(),
-          'updatedBy': currentUser?.uid,
-          'updatedAt': FieldValue.serverTimestamp(),
+          _selectedWeekday.toString(): {
+            'morning': morningController.text.trim(),
+            'evening': eveningController.text.trim(),
+            'updatedBy': currentUser?.uid,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }
         },
         merge: true,
       );

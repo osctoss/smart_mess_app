@@ -57,4 +57,26 @@ class FirestoreService {
       return result;
     });
   }
+
+  Future<void> approveMemberAndAssignRollNumber(String messId, String uid) async {
+    final messRef = _db.collection('messes').doc(messId);
+    final userRef = _db.collection('users').doc(uid);
+
+    await _db.runTransaction((transaction) async {
+      final messDoc = await transaction.get(messRef);
+      if (!messDoc.exists) return;
+
+      final data = messDoc.data()!;
+      final int currentRollNumber = data['lastRollNumber'] ?? 0;
+      final int nextRollNumber = currentRollNumber + 1;
+
+      transaction.update(messRef, {'lastRollNumber': nextRollNumber});
+      transaction.update(userRef, {
+        'approved': true,
+        'role': 'CLIENT',
+        'messId': messId,
+        'rollNumber': nextRollNumber,
+      });
+    });
+  }
 }

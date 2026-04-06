@@ -99,7 +99,7 @@ class MembersScreen extends StatelessWidget {
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            Text(member.name, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
+                                            Text(member.displayName, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
                                             Text(member.contactNumber, style: AppTextStyles.bodySmall),
                                           ],
                                         ),

@@ -26,7 +26,9 @@ class ProfileScreen extends StatelessWidget {
             : FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
         builder: (context, snapshot) {
           final profileData = snapshot.data?.data();
-          final displayName = profileData?['name'] as String? ?? user?.email?.split('@')[0] ?? 'User';
+          final String name = profileData?['name'] as String? ?? user?.email?.split('@')[0] ?? 'User';
+          final int? rollNumber = profileData?['rollNumber'];
+          final displayName = rollNumber != null ? '$name (#$rollNumber)' : name;
           final createdAt = profileData?['createdAt'] is Timestamp
               ? (profileData!['createdAt'] as Timestamp).toDate()
               : null;

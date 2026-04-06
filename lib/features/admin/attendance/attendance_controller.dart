@@ -177,6 +177,7 @@ class AttendanceController with ChangeNotifier {
                 ? (data['createdAt'] as Timestamp).toDate()
                 : DateTime.now(),
             messId: _messId,
+            rollNumber: data['rollNumber'],
             approved: true,
             permanentOff: data['permanentOff'] ?? false,
             morningOff: data['morningOff'] ?? false,

@@ -114,7 +114,7 @@ class ClientDashboard extends StatelessWidget {
                     const SizedBox(height: 16),
 
                     // Today's Menu
-                    _buildMenuCard(controller).animate().fadeIn(delay: 150.ms, duration: 500.ms).slideY(begin: 0.1, end: 0, delay: 150.ms, duration: 500.ms),
+                    _buildMenuCard(context, controller).animate().fadeIn(delay: 150.ms, duration: 500.ms).slideY(begin: 0.1, end: 0, delay: 150.ms, duration: 500.ms),
 
                     const SizedBox(height: 16),
 
@@ -239,7 +239,7 @@ class ClientDashboard extends StatelessWidget {
     );
   }
 
-  Widget _buildMenuCard(ClientDashboardController controller) {
+  Widget _buildMenuCard(BuildContext context, ClientDashboardController controller) {
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -268,9 +268,11 @@ class ClientDashboard extends StatelessWidget {
                     Text('Morning', style: AppTextStyles.label.copyWith(color: AppColors.accentAmber)),
                     const SizedBox(height: 4),
                     Text(
-                      controller.todayMenu?.morningMenu ?? 'Not set',
+                      (controller.todayMenu?.morningMenu ?? '').isNotEmpty
+                          ? controller.todayMenu!.morningMenu
+                          : 'Not set',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: controller.todayMenu?.morningMenu != null
+                        color: (controller.todayMenu?.morningMenu ?? '').isNotEmpty
                             ? AppColors.textPrimary
                             : AppColors.textMuted,
                       ),
@@ -314,9 +316,11 @@ class ClientDashboard extends StatelessWidget {
                     Text('Evening', style: AppTextStyles.label.copyWith(color: AppColors.accentOrange)),
                     const SizedBox(height: 4),
                     Text(
-                      controller.todayMenu?.eveningMenu ?? 'Not set',
+                      (controller.todayMenu?.eveningMenu ?? '').isNotEmpty
+                          ? controller.todayMenu!.eveningMenu
+                          : 'Not set',
                       style: AppTextStyles.bodyMedium.copyWith(
-                        color: controller.todayMenu?.eveningMenu != null
+                        color: (controller.todayMenu?.eveningMenu ?? '').isNotEmpty
                             ? AppColors.textPrimary
                             : AppColors.textMuted,
                       ),
@@ -326,8 +330,150 @@ class ClientDashboard extends StatelessWidget {
               ),
             ],
           ),
+
+          const SizedBox(height: 20),
+
+          // View Full Week Button
+          GestureDetector(
+            onTap: () => _showWeeklyMenuBottomSheet(context, controller),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.glassBorder),
+              ),
+              child: Center(
+                child: Text(
+                  'View Full Week\'s Menu',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.accentOrange,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  void _showWeeklyMenuBottomSheet(BuildContext context, ClientDashboardController controller) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        final Map<String, dynamic> weeklyMenu = controller.weeklyMenu ?? {};
+        const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+        return Container(
+          height: MediaQuery.of(context).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: AppColors.surfaceDark,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: AppColors.textMuted.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text('Weekly Menu', style: AppTextStyles.heading3),
+              const SizedBox(height: 16),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  itemCount: 7,
+                  itemBuilder: (context, index) {
+                    final weekdayStr = (index + 1).toString();
+                    final dayData = weeklyMenu[weekdayStr] as Map<String, dynamic>? ?? {};
+                    final morning = dayData['morning']?.toString().trim() ?? '';
+                    final evening = dayData['evening']?.toString().trim() ?? '';
+                    final isToday = DateTime.now().weekday == (index + 1);
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(16),
+                        border: isToday ? Border.all(color: AppColors.accentOrange, width: 1.5) : Border.all(color: AppColors.glassBorder),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                dayNames[index],
+                                style: AppTextStyles.heading4.copyWith(
+                                  color: isToday ? AppColors.accentOrange : AppColors.textPrimary,
+                                ),
+                              ),
+                              if (isToday) ...[
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.accentOrange.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text('Today', style: AppTextStyles.caption.copyWith(color: AppColors.accentOrange)),
+                                )
+                              ],
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.wb_sunny_rounded, size: 16, color: AppColors.accentAmber),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  morning.isNotEmpty ? morning : 'Not set',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: morning.isNotEmpty ? AppColors.textSecondary : AppColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(Icons.nightlight_round, size: 16, color: AppColors.accentBlue),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  evening.isNotEmpty ? evening : 'Not set',
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    color: evening.isNotEmpty ? AppColors.textSecondary : AppColors.textMuted,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

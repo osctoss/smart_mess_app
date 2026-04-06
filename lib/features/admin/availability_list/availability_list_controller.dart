@@ -126,6 +126,7 @@ class AvailabilityListController with ChangeNotifier {
         name: data['name'] ?? '',
         contactNumber: data['contactNumber'] ?? '',
         role: data['role'] ?? '',
+        rollNumber: data['rollNumber'],
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] as Timestamp).toDate()
             : DateTime.now(),

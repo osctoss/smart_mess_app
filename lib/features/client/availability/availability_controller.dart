@@ -31,15 +31,25 @@ class AvailabilityController with ChangeNotifier {
 
   bool _savedPermanentOff = false;
   bool? _draftPermanentOff;
-  bool get isPermanentOff => _draftPermanentOff ?? _savedPermanentOff;
+  bool get isGlobalPermanentOff => _draftPermanentOff ?? _savedPermanentOff;
+
+  bool _savedMorningOff = false;
+  bool? _draftMorningOff;
+  bool get isPermanentMorningOff => _draftMorningOff ?? _savedMorningOff;
+
+  bool _savedEveningOff = false;
+  bool? _draftEveningOff;
+  bool get isPermanentEveningOff => _draftEveningOff ?? _savedEveningOff;
 
   bool get isMorningOn => _availabilityValueFor(_selectedDate, 'MORNING');
   bool get isEveningOn => _availabilityValueFor(_selectedDate, 'EVENING');
 
   bool get hasUnsavedChanges {
-    final hasPermanentOffChange =
-        _draftPermanentOff != null && _draftPermanentOff != _savedPermanentOff;
-    return hasPermanentOffChange || _draftAvailability.isNotEmpty;
+    final hasGlobalOffChange = _draftPermanentOff != null && _draftPermanentOff != _savedPermanentOff;
+    final hasMorningOffChange = _draftMorningOff != null && _draftMorningOff != _savedMorningOff;
+    final hasEveningOffChange = _draftEveningOff != null && _draftEveningOff != _savedEveningOff;
+    
+    return hasGlobalOffChange || hasMorningOffChange || hasEveningOffChange || _draftAvailability.isNotEmpty;
   }
 
   String? _messId;
@@ -84,11 +94,15 @@ class AvailabilityController with ChangeNotifier {
               createdAt: DateTime.now(),
               messId: data['messId'],
               permanentOff: data['permanentOff'] ?? false,
+              morningOff: data['morningOff'] ?? false,
+              eveningOff: data['eveningOff'] ?? false,
             ),
           )
           .listen((userDoc) {
         _messId = userDoc.messId;
         _savedPermanentOff = userDoc.permanentOff;
+        _savedMorningOff = userDoc.morningOff;
+        _savedEveningOff = userDoc.eveningOff;
         _loadAvailability(_selectedDate);
       }, onError: (_) {
         _isLoading = false;
@@ -127,7 +141,25 @@ class AvailabilityController with ChangeNotifier {
 
   bool _availabilityValueFor(DateTime date, String meal) {
     final key = _availabilityKey(date, meal);
-    return _draftAvailability[key] ?? _savedAvailability[key] ?? true;
+    
+    // Draft always has highest priority (user just toggled in this session)
+    if (_draftAvailability.containsKey(key)) return _draftAvailability[key]!;
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final selectedDay = DateTime(date.year, date.month, date.day);
+    
+    // For today and future dates, permanent off takes priority over old saved data
+    if (!selectedDay.isBefore(today)) {
+      if (isGlobalPermanentOff) return false;
+      if (meal == 'MORNING' && isPermanentMorningOff) return false;
+      if (meal == 'EVENING' && isPermanentEveningOff) return false;
+    }
+    
+    // For past dates (or when permanent off is not active), use saved data
+    if (_savedAvailability.containsKey(key)) return _savedAvailability[key]!;
+    
+    return true; // ON by default
   }
 
   void _loadAvailability(DateTime date) {
@@ -198,7 +230,9 @@ class AvailabilityController with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }, onError: (_) {
-      _savedAvailability[key] = true;
+      // Don't set _savedAvailability here — let _availabilityValueFor
+      // fall through to the permanent off checks instead of defaulting to ON.
+      _savedAvailability.remove(key);
       _isLoading = false;
       notifyListeners();
     });
@@ -212,13 +246,29 @@ class AvailabilityController with ChangeNotifier {
     notifyListeners();
   }
 
+  void togglePermanentMorningOff(bool value) {
+    _draftMorningOff = value;
+    if (_draftMorningOff == _savedMorningOff) {
+      _draftMorningOff = null;
+    }
+    notifyListeners();
+  }
+
+  void togglePermanentEveningOff(bool value) {
+    _draftEveningOff = value;
+    if (_draftEveningOff == _savedEveningOff) {
+      _draftEveningOff = null;
+    }
+    notifyListeners();
+  }
+
   void toggleMorning(bool value) {
-    if (_isLockedMorning) return;
+    if (_isLockedMorning || isGlobalPermanentOff || isPermanentMorningOff) return;
     _setDraftAvailability(_selectedDate, 'MORNING', value);
   }
 
   void toggleEvening(bool value) {
-    if (_isLockedEvening) return;
+    if (_isLockedEvening || isGlobalPermanentOff || isPermanentEveningOff) return;
     _setDraftAvailability(_selectedDate, 'EVENING', value);
   }
 
@@ -249,14 +299,36 @@ class AvailabilityController with ChangeNotifier {
     notifyListeners();
 
     try {
-      if (_draftPermanentOff != null &&
-          _draftPermanentOff != _savedPermanentOff) {
+      final updates = <String, dynamic>{};
+      
+      if (_draftPermanentOff != null && _draftPermanentOff != _savedPermanentOff) {
+        updates['permanentOff'] = _draftPermanentOff;
+      }
+      if (_draftMorningOff != null && _draftMorningOff != _savedMorningOff) {
+        updates['morningOff'] = _draftMorningOff;
+      }
+      if (_draftEveningOff != null && _draftEveningOff != _savedEveningOff) {
+        updates['eveningOff'] = _draftEveningOff;
+      }
+
+      if (updates.isNotEmpty) {
         await _firestoreService.updateData(
           path: 'users/${user.uid}',
-          data: {'permanentOff': _draftPermanentOff},
+          data: updates,
         );
-        _savedPermanentOff = _draftPermanentOff!;
-        _draftPermanentOff = null;
+        
+        if (updates.containsKey('permanentOff')) {
+          _savedPermanentOff = _draftPermanentOff!;
+          _draftPermanentOff = null;
+        }
+        if (updates.containsKey('morningOff')) {
+          _savedMorningOff = _draftMorningOff!;
+          _draftMorningOff = null;
+        }
+        if (updates.containsKey('eveningOff')) {
+          _savedEveningOff = _draftEveningOff!;
+          _draftEveningOff = null;
+        }
       }
 
       final draftEntries = _draftAvailability.entries.toList();

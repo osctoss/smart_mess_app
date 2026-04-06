@@ -17,6 +17,7 @@ enum NotificationType {
   approvalRequest,
   deleteRequest,
   dietAllocated,
+  dietDeducted,
   accountDeleted,
 }
 

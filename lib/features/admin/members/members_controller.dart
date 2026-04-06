@@ -86,6 +86,7 @@ class MembersController with ChangeNotifier {
         contactNumber: data['contactNumber'] ?? '',
         role: data['role'] ?? '',
         messId: _messId,
+        rollNumber: data['rollNumber'],
         approved: data['approved'] ?? false,
         createdAt: data['createdAt'] != null
             ? (data['createdAt'] as Timestamp).toDate()
@@ -97,6 +98,7 @@ class MembersController with ChangeNotifier {
         _pendingMembers = users.where((u) => !u.approved && u.role == 'CLIENT').toList();
         _isLoading = false;
         notifyListeners();
+        _migrateExistingMembersIfNeeded();
       },
       onError: (e) {
         _errorMessage = 'Failed to fetch members: $e';
@@ -156,10 +158,24 @@ class MembersController with ChangeNotifier {
   }
 
   Future<void> approveMember(String uid) async {
-    await _firestoreService.updateData(
-      path: 'users/$uid',
-      data: {'approved': true},
-    );
+    if (_messId != null) {
+      await _firestoreService.approveMemberAndAssignRollNumber(_messId!, uid);
+    }
+  }
+
+  Future<void> _migrateExistingMembersIfNeeded() async {
+    if (_messId == null) return;
+    
+    final unnumberedMembers = _members.where((m) => m.rollNumber == null).toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    for (final member in unnumberedMembers) {
+      try {
+        await _firestoreService.approveMemberAndAssignRollNumber(_messId!, member.uid);
+      } catch (e) {
+        debugPrint('Failed to auto-migrate roll number for \${member.uid}: \$e');
+      }
+    }
   }
 
   @override

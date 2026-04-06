@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/firestore_service.dart';
 import '../../../models/user_model.dart';
@@ -22,8 +21,30 @@ class ClientDashboardController with ChangeNotifier {
   DietBalanceModel? _dietBalance;
   DietBalanceModel? get dietBalance => _dietBalance;
 
-  MenuModel? _todayMenu;
-  MenuModel? get todayMenu => _todayMenu;
+  Map<String, dynamic>? _weeklyMenu;
+  Map<String, dynamic>? get weeklyMenu => _weeklyMenu;
+
+  MenuModel? get todayMenu {
+    if (_weeklyMenu == null || _user?.messId == null) return null;
+    final int weekday = DateTime.now().weekday;
+    final dayData = _weeklyMenu![weekday.toString()] as Map<String, dynamic>?;
+    
+    if (dayData == null) return null;
+
+    final morning = dayData['morning']?.toString().trim() ?? '';
+    final evening = dayData['evening']?.toString().trim() ?? '';
+
+    // If both are completely empty, treat as no menu set today
+    if (morning.isEmpty && evening.isEmpty) return null;
+
+    return MenuModel(
+      messId: _user!.messId!,
+      date: weekday.toString(),
+      morningMenu: morning,
+      eveningMenu: evening,
+      updatedBy: '',
+    );
+  }
 
   bool _isLoading = true;
   bool get isLoading => _isLoading;
@@ -126,25 +147,16 @@ class ClientDashboardController with ChangeNotifier {
       notifyListeners();
     });
 
-    // 4. Fetch Today's Menu
-    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final menuId = '${_user!.messId}_$today';
-    
+    // 4. Fetch Weekly Menu
     _menuSub?.cancel();
     _menuSub = _firestoreService.documentStream(
-      path: 'menus/$menuId',
-      builder: (data, id) => MenuModel(
-        messId: _user!.messId!,
-        date: today,
-        morningMenu: data['morningMenu'] ?? 'Not Set',
-        eveningMenu: data['eveningMenu'] ?? 'Not Set',
-        updatedBy: data['updatedBy'] ?? '',
-      ),
-    ).listen((menuDoc) {
-      _todayMenu = menuDoc;
+      path: 'weekly_menus/${_user!.messId}',
+      builder: (data, id) => data,
+    ).listen((menuData) {
+      _weeklyMenu = menuData;
       notifyListeners();
     }, onError: (_) {
-      _todayMenu = null;
+      _weeklyMenu = null;
       notifyListeners();
     });
   }

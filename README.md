@@ -21,9 +21,9 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 
 | Page | Feature | Description |
 |------|---------|-------------|
-| **Admin Home Hub** | Mess Selection | New centralized hub to manage multiple mess organizations |
+| **Admin Home Hub** | Mess Selection | Centralized hub to manage up to **3 distinct messes** per admin |
 | **Dashboard** | Quick Actions | Access to menu, availability, members, attendance & notifications. Admins can also update mess names here. |
-| **Menu Management** | Daily Menus | Set/update morning & evening meal menus |
+| **Menu Management** | Weekly Templates | Set/update a recurring **7-day weekly menu template** (Mon–Sun) |
 | **Availability List** | Meal Tracking | View available clients for each meal; generate attendance records |
 | **Members Panel** | Member Mgmt | View all members, approve/remove, manage diet balances |
 | **Client Detail** | Diet Allocation | Allocate diets to individual members (sends notification) |
@@ -35,8 +35,8 @@ A **multi-tenant mess (dining hall) management system** built with **Flutter** a
 | Page | Feature | Description |
 |------|---------|-------------|
 | **Home Hub** | Central Landing | Shows joined mess, available messes to join, profile & notifications |
-| **Mess Dashboard** | Mess View | Diet counter, today's menu, availability management |
-| **Availability** | Meal Toggles | Toggle ON/OFF for meals (past 30 days view, next 7 days editable) |
+| **Mess Dashboard** | Mess View | Diet counter, today's dynamic menu, "View Full Week" animated bottom sheet |
+| **Availability** | Meal Toggles | Toggle ON/OFF for meals, plus new **Specific Meal Permanent Off** checkboxes (Morning/Evening) |
 | **Notifications** | Activity Feed | Diet allocation alerts, removal requests (accept/reject), status updates |
 | **Profile** | Account Mgmt | View profile, change password, change phone number, logout |
 
@@ -109,20 +109,20 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
   <tr>
     <td align="center"><img src="assets/UI_visuals/Admin_home.jpg" width="200"/><br/><b>Admin Home Hub</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_dashboard.jpg" width="200"/><br/><b>Dashboard</b></td>
-    <td align="center"><img src="assets/UI_visuals/Admin_mess_name_change.jpg" width="200"/><br/><b>Mess Name Update</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_menu_management.jpg" width="200"/><br/><b>Menu Management</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_mess_name_change.jpg" width="200"/><br/><b>Mess Name Update</b></td>
   </tr>
   <tr>
     <td align="center"><img src="assets/UI_visuals/Admin_members.jpg" width="200"/><br/><b>Members</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_pending_rq.jpg" width="200"/><br/><b>Pending Requests</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_diet_allocation.jpg" width="200"/><br/><b>Diet Allocation</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_notification.jpg" width="200"/><br/><b>Notifications</b></td>
-    <td align="center"><img src="assets/UI_visuals/Admin_availability_info.jpg" width="200"/><br/><b>Availability List</b></td>
   </tr>
   <tr>
-    <td align="center"><img src="assets/UI_visuals/Admin_availibilty_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_attendance_info.jpg" width="200"/><br/><b>Attendance</b></td>
     <td align="center"><img src="assets/UI_visuals/Admin_attendance_info_2.jpg" width="200"/><br/><b>Attendance Records</b></td>
-    <td></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_availability_info.jpg" width="200"/><br/><b>Availability List</b></td>
+    <td align="center"><img src="assets/UI_visuals/Admin_availibilty_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
   </tr>
 </table>
 
@@ -132,11 +132,13 @@ The entire UI follows a custom dark theme called **"Midnight Feast"**, featuring
   <tr>
     <td align="center"><img src="assets/UI_visuals/Client_home.jpg" width="200"/><br/><b>Home Hub</b></td>
     <td align="center"><img src="assets/UI_visuals/Client_dashboard.jpg" width="200"/><br/><b>Mess Dashboard</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_mess_menu_view.jpg" width="200"/><br/><b>Weekly Menu</b></td>
     <td align="center"><img src="assets/UI_visuals/Client_notification.jpg" width="200"/><br/><b>Notifications</b></td>
   </tr>
   <tr>
     <td align="center"><img src="assets/UI_visuals/Client_availability_info.jpg" width="200"/><br/><b>Availability Calendar</b></td>
-    <td align="center"><img src="assets/UI_visuals/Client_availibility_info_2.jpg" width="200"/><br/><b>Availability Details</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_availability_info_2.jpg" width="200"/><br/><b>Availability Lock</b></td>
+    <td align="center"><img src="assets/UI_visuals/Client_availability_info_3.jpg" width="200"/><br/><b>Permanent Off</b></td>
     <td></td>
   </tr>
 </table>
@@ -197,9 +199,8 @@ smart_mess_app/
 │   │       └── app_routes.dart        # Route constants + animated route generator
 │   │
 │   ├── models/
-│   │   ├── user_model.dart            # User profile + role + mess info
 │   │   ├── mess_model.dart            # Mess group data
-│   │   ├── menu_model.dart            # Daily menu (morning/evening)
+│   │   ├── user_model.dart            # User profile + role + mess info
 │   │   ├── diet_balance_model.dart    # Total & remaining diets
 │   │   ├── availability_model.dart    # Per-meal availability status
 │   │   ├── attendance_model.dart      # Attendance record
@@ -333,14 +334,11 @@ All data is scoped by `messId` to ensure multi-tenant isolation.
 | `remainingDiets` | number | Remaining (never < 0) |
 | `lastUpdated` | timestamp | Last modification time |
 
-### `menus/{messId_date}`
+### `weekly_menus/{messId}`
 | Field | Type | Description |
 |-------|------|-------------|
-| `messId` | string | Mess reference |
-| `date` | string | `YYYY-MM-DD` |
-| `morningMenu` | string | Morning meal items |
-| `eveningMenu` | string | Evening meal items |
-| `updatedBy` | uid | Admin who updated |
+| `1` to `7` | Map | Weekday maps (1=Mon, 7=Sun). Example: `{"morning": "...", "evening": "..."}` |
+| `updatedBy` | uid | Admin who last updated |
 | `updatedAt` | timestamp | Update time |
 
 ### `availability/{uid_date_meal}`
@@ -530,7 +528,7 @@ For each meal, a diet is deducted if **all** conditions are met:
 ### Firestore Rules
 - All reads/writes are filtered by `messId`
 - Clients cannot access data from other messes
-- **Only Admin** can modify: menus, dietBalances, approvals, attendance
+- **Only Admin** can modify: weekly_menus, dietBalances, approvals, attendance
 - **Only Client** can modify: their own availability & profile
 - Notifications are scoped to sender (`fromUid`) and receiver (`toUid`)
 

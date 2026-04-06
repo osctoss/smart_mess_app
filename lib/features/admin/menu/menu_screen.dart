@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:table_calendar/table_calendar.dart';
+
 import 'menu_controller.dart';
 import '../../shared_widgets/custom_button.dart';
 import '../../shared_widgets/custom_text_field.dart';
@@ -21,7 +21,7 @@ class MenuScreen extends StatelessWidget {
         appBar: AppBar(title: const Text('Menu Management')),
         body: Consumer<MenuManagementController>(
           builder: (context, controller, _) {
-            if (controller.isLoading && controller.selectedDate == DateTime.now()) {
+            if (controller.isLoading) {
               return const Center(child: CircularProgressIndicator(color: AppColors.accentOrange));
             }
 
@@ -29,44 +29,46 @@ class MenuScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // Calendar
+                  // Weekday Selector
                   GlassCard(
-                    padding: const EdgeInsets.all(12),
-                    child: TableCalendar(
-                      firstDay: DateTime.now().subtract(const Duration(days: 7)),
-                      lastDay: DateTime.now().add(const Duration(days: 30)),
-                      focusedDay: controller.selectedDate,
-                      currentDay: DateTime.now(),
-                      selectedDayPredicate: (day) => isSameDay(controller.selectedDate, day),
-                      onDaySelected: (selectedDay, focusedDay) {
-                        controller.onDateSelected(selectedDay);
-                      },
-                      calendarFormat: CalendarFormat.week,
-                      calendarStyle: CalendarStyle(
-                        defaultTextStyle: AppTextStyles.bodyMedium,
-                        weekendTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-                        outsideTextStyle: AppTextStyles.bodySmall.copyWith(color: AppColors.textMuted),
-                        todayDecoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(color: AppColors.accentOrange, width: 1.5),
-                        ),
-                        todayTextStyle: AppTextStyles.bodyMedium.copyWith(color: AppColors.accentOrange),
-                        selectedDecoration: const BoxDecoration(
-                          gradient: AppColors.primaryGradient,
-                          shape: BoxShape.circle,
-                        ),
-                        selectedTextStyle: AppTextStyles.bodyMedium.copyWith(color: Colors.white, fontWeight: FontWeight.w600),
-                      ),
-                      headerStyle: HeaderStyle(
-                        formatButtonVisible: false,
-                        titleCentered: true,
-                        titleTextStyle: AppTextStyles.heading4,
-                        leftChevronIcon: Icon(Icons.chevron_left_rounded, color: AppColors.accentOrange),
-                        rightChevronIcon: Icon(Icons.chevron_right_rounded, color: AppColors.accentOrange),
-                      ),
-                      daysOfWeekStyle: DaysOfWeekStyle(
-                        weekdayStyle: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600),
-                        weekendStyle: AppTextStyles.caption.copyWith(fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: List.generate(7, (index) {
+                          final weekday = index + 1; // 1-7
+                          final isSelected = controller.selectedWeekday == weekday;
+                          
+                          const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                          final dayName = dayNames[index];
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            child: GestureDetector(
+                              onTap: () => controller.onWeekdaySelected(weekday),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                decoration: BoxDecoration(
+                                  gradient: isSelected ? AppColors.primaryGradient : null,
+                                  color: isSelected ? null : AppColors.surfaceLight,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isSelected ? AppColors.accentOrange.withValues(alpha: 0.5) : AppColors.glassBorder,
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  dayName,
+                                  style: AppTextStyles.bodyMedium.copyWith(
+                                    color: isSelected ? Colors.white : AppColors.textSecondary,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
                       ),
                     ),
                   ).animate().fadeIn(duration: 500.ms),

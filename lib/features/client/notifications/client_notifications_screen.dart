@@ -81,7 +81,27 @@ class ClientNotificationsScreen extends StatelessWidget {
                 index: index,
                 child: Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: _buildNotificationCard(context, notification, firestoreService, user),
+                  child: Dismissible(
+                    key: Key(notification.notificationId),
+                    direction: DismissDirection.endToStart,
+                    background: Container(
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 20),
+                      decoration: BoxDecoration(
+                        color: AppColors.accentRose.withValues(alpha: 0.8),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const Icon(Icons.delete_sweep_rounded, color: Colors.white, size: 28),
+                    ),
+                    onDismissed: (direction) async {
+                      await firestoreService.deleteData(path: 'notifications/${notification.notificationId}');
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Notification deleted')),
+                      );
+                    },
+                    child: _buildNotificationCard(context, notification, firestoreService, user),
+                  ),
                 ),
               );
             },
@@ -106,6 +126,11 @@ class ClientNotificationsScreen extends StatelessWidget {
         accentColor = AppColors.accentTeal;
         icon = Icons.restaurant_rounded;
         title = 'Diet Allocated';
+        break;
+      case 'DIET_DEDUCTED':
+        accentColor = AppColors.accentOrange;
+        icon = Icons.remove_circle_outline_rounded;
+        title = 'Diet Deducted';
         break;
       case 'DELETE_REQUEST':
         accentColor = AppColors.accentAmber;

@@ -84,10 +84,21 @@ class ClientDetailScreen extends StatelessWidget {
 
       await NotificationService().sendNotification(
         messId: messId,
-        type: NotificationType.dietAllocated,
+        type: isDeduction ? NotificationType.dietDeducted : NotificationType.dietAllocated,
         fromUid: adminUid,
         toUid: user!.uid,
         message: isDeduction ? '$amount diets deducted' : '$amount diets added',
+      );
+
+      // Notification for Admin
+      await NotificationService().sendNotification(
+        messId: messId,
+        type: isDeduction ? NotificationType.dietDeducted : NotificationType.dietAllocated,
+        fromUid: user!.uid,
+        toUid: adminUid,
+        message: isDeduction 
+            ? 'You deducted $amount diets for ${user!.name}' 
+            : 'You allocated $amount diets to ${user!.name}',
       );
 
       if (!context.mounted) return;
@@ -109,7 +120,7 @@ class ClientDetailScreen extends StatelessWidget {
     final TextEditingController dietController = TextEditingController();
 
     return GradientScaffold(
-      appBar: AppBar(title: Text(user?.name ?? 'Client Detail')),
+      appBar: AppBar(title: Text(user?.displayName ?? 'Client Detail')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24.0),
         child: Column(
@@ -138,7 +149,7 @@ class ClientDetailScreen extends StatelessWidget {
             ).animate().scale(begin: const Offset(0.6, 0.6), end: const Offset(1, 1), duration: 500.ms, curve: Curves.elasticOut),
 
             const SizedBox(height: 16),
-            Text(user?.name ?? 'Name', style: AppTextStyles.heading2).animate().fadeIn(delay: 200.ms),
+            Text(user?.displayName ?? 'Name', style: AppTextStyles.heading2).animate().fadeIn(delay: 200.ms),
             const SizedBox(height: 4),
             Text(user?.contactNumber ?? 'Contact', style: AppTextStyles.subtitle).animate().fadeIn(delay: 300.ms),
             const SizedBox(height: 8),
