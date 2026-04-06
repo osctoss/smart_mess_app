@@ -61,10 +61,17 @@ class FirestoreService {
   Future<void> approveMemberAndAssignRollNumber(String messId, String uid) async {
     final messRef = _db.collection('messes').doc(messId);
     final userRef = _db.collection('users').doc(uid);
+    final dietRef = _db.collection('dietBalances').doc(uid);
 
     await _db.runTransaction((transaction) async {
       final messDoc = await transaction.get(messRef);
       if (!messDoc.exists) return;
+
+      final userDoc = await transaction.get(userRef);
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data()!;
+      final bool wasApproved = userData['approved'] ?? false;
 
       final data = messDoc.data()!;
       final int currentRollNumber = data['lastRollNumber'] ?? 0;
@@ -77,6 +84,17 @@ class FirestoreService {
         'messId': messId,
         'rollNumber': nextRollNumber,
       });
+
+      // Reset diet balance if this is a fresh approval for the mess.
+      // E.g., user left previous mess and joins a new one.
+      if (!wasApproved) {
+        transaction.set(dietRef, {
+          'uid': uid,
+          'totalDiets': 0,
+          'remainingDiets': 0,
+          'lastUpdated': FieldValue.serverTimestamp(),
+        });
+      }
     });
   }
 }
