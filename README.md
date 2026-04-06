@@ -233,8 +233,9 @@ smart_mess_app/
 │       │   └── profile/              # Profile, change password, change phone
 │       │
 │       ├── admin/
-│       │   ├── dashboard/            # Admin home with quick action cards
-│       │   ├── menu/                 # Set daily menus (controller + screen)
+│       │   ├── home/                 # ★ Admin Home Hub (manage multiple messes)
+│       │   ├── dashboard/            # Admin dashboard with quick action cards
+│       │   ├── menu/                 # Set weekly menus (controller + screen)
 │       │   ├── availability_list/    # View available members per meal
 │       │   ├── attendance/           # Record & view attendance
 │       │   ├── members/              # Member list + client detail + diet allocation
@@ -562,7 +563,7 @@ For each meal, a diet is deducted if **all** conditions are met:
 
 ## 📄 License
 
-This project is developed as part of an academic lab project.
+**Author:** Manish Patel (Osctoss)
 
 ---
 
