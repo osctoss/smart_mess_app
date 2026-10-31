@@ -1,8 +1,20 @@
-# 🍽️ Smart Mess App
+<div align="center">
 
-A **multi-tenant mess (dining hall) management system** built with **Flutter** and **Firebase**. The app streamlines daily operations for both mess administrators and members — from menu planning and attendance tracking to availability management, diet balance monitoring, and member approvals.
+<img src="assets/icons/smart_mess_app.svg" alt="Smart Mess App Logo" width="180" height="180" />
 
-> **Platform:** Flutter (Dart) + Firebase (Auth, Cloud Firestore, Cloud Functions)
+# 🍽️ Smart Mess App — Multi-Tenant Dining Management System
+
+**A modern, multi-tenant mess and dining hall management system built with Flutter & Firebase**
+
+Streamlining daily operations for mess administrators and members — from weekly menu planning and automated diet deductions to attendance tracking, availability management, and member approvals.
+
+[![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
+[![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev/)
+[![Firebase](https://img.shields.io/badge/Firebase-Backend-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Cloud Functions](https://img.shields.io/badge/Cloud_Functions-v2-4285F4?logo=googlecloud&logoColor=white)](https://firebase.google.com/docs/functions)
+[![Material 3](https://img.shields.io/badge/Material_3-Midnight_Feast-7B1FA2?logo=materialdesign&logoColor=white)](https://m3.material.io/)
+
+</div>
 
 ---
 
@@ -156,7 +168,8 @@ smart_mess_app/
 │
 ├── assets/
 │   ├── icons/
-│   │   └── Mess_icon.png            # App icon asset
+│   │   ├── Mess_icon.png            # App icon asset
+│   │   └── smart_mess_app.svg       # Vector hero logo
 │   └── UI_visuals/                  # App screenshots for README
 │
 ├── functions/
